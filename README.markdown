@@ -1,6 +1,6 @@
 # libmesode
 
-libstrophe is a fork of libstrophe (http://strophe.im/libstrophe/) for use in Profanity (http://www.profanity.im/).
+libmesode is a fork of libstrophe (http://strophe.im/libstrophe/) for use in Profanity (http://www.profanity.im/).
 
 Reasons for forking:
 
