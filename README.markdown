@@ -1,14 +1,14 @@
-# libstrophe
+# libmesode
 
-libstrophe is a lightweight XMPP client library written in C. It has
-minimal dependencies and is configurable for various environments. It
-runs well on both Linux, Unix, and Windows based platforms.
+libstrophe is a fork of libstrophe (http://strophe.im/libstrophe/) for use in Profanity (http://www.profanity.im/).
 
-Its goals are:
+Reasons for forking:
 
-- usable quickly
-- well documented
-- reliable
+- Remove Windows support
+- Support only one XML Parser implementation (expat)
+- Support only one SSL implementation (OpenSSL)
+
+This simplifies maintenance of the library when used in Profanity. 
 
 ## Build Instructions
 
@@ -40,25 +40,6 @@ Note, the default install path is `/usr/local/`, to specify
 another path use the `--prefix` option during configure, e.g.:
 
     ./configure --prefix=/usr
-
-## Requirements
-
-libstrophe requires:
-
-- expat or libxml2 - expat is the default; use --with-libxml2 to
-  switch
-- libresolv on UNIX systems - make sure you include -lresolv
-  if you are compiling by hand. 
-- libtool
-
-In addition, if you wish to run the unit tests, you will need the
-check package.
-
-### OS X (with Homebrew package manager)
-
-You can install libstrophe with:
-
-    brew install libstrophe
 
 ## Documentation
 
