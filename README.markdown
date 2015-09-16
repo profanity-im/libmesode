@@ -1,6 +1,6 @@
 # libmesode
 
-libstrophe is a fork of libstrophe (http://strophe.im/libstrophe/) for use in Profanity (http://www.profanity.im/).
+libmesode is a fork of libstrophe (http://strophe.im/libstrophe/) for use in Profanity (http://www.profanity.im/).
 
 Reasons for forking:
 
@@ -25,7 +25,7 @@ From the top-level directory, run the following commands:
 
 This will create a static library, also in the top-level
 directory, which can be linked into other programs. The 
-public API is defined in `strophe.h` which is also in the
+public API is defined in `mesode.h` which is also in the
 top-level directory.
 
 The `examples` directory contains some examples of how to
