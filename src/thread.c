@@ -1,7 +1,7 @@
 /* thread.c
 ** strophe XMPP client library -- thread abstraction
 **
-** Copyright (C) 2005-2009 Collecta, Inc. 
+** Copyright (C) 2005-2009 Collecta, Inc.
 **
 **  This software is provided AS-IS with no warranty, either express
 **  or implied.
@@ -16,12 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#else
 #include <pthread.h>
-#endif
 
 #include "mesode.h"
 #include "common.h"
@@ -29,12 +24,7 @@
 
 struct _mutex_t {
     const xmpp_ctx_t *ctx;
-
-#ifdef _WIN32
-    HANDLE mutex;
-#else
     pthread_mutex_t *mutex;
-#endif
 };
 
 /* mutex functions */
@@ -46,16 +36,12 @@ mutex_t *mutex_create(const xmpp_ctx_t * ctx)
     mutex = xmpp_alloc(ctx, sizeof(mutex_t));
     if (mutex) {
 	mutex->ctx = ctx;
-#ifdef _WIN32
-	mutex->mutex = CreateMutex(NULL, FALSE, NULL);
-#else
 	mutex->mutex = xmpp_alloc(ctx, sizeof(pthread_mutex_t));
 	if (mutex->mutex)
 	    if (pthread_mutex_init(mutex->mutex, NULL) != 0) {
 		xmpp_free(ctx, mutex->mutex);
 		mutex->mutex = NULL;
 	    }
-#endif
 	if (!mutex->mutex) {
 	    xmpp_free(ctx, mutex);
 	    mutex = NULL;
@@ -70,13 +56,8 @@ int mutex_destroy(mutex_t *mutex)
     int ret = 1;
     const xmpp_ctx_t *ctx;
 
-#ifdef _WIN32
-    if (mutex->mutex)
-	ret = CloseHandle(mutex->mutex);
-#else
     if (mutex->mutex)
 	ret = pthread_mutex_destroy(mutex->mutex) == 0;
-#endif
     ctx = mutex->ctx;
     xmpp_free(ctx, mutex);
 
@@ -85,14 +66,7 @@ int mutex_destroy(mutex_t *mutex)
 
 int mutex_lock(mutex_t *mutex)
 {
-    int ret;
-
-#ifdef _WIN32
-    ret = WaitForSingleObject(mutex->mutex, INFINITE) == 0;
-#else
-    ret = pthread_mutex_lock(mutex->mutex) == 0;
-#endif
-
+    int ret = pthread_mutex_lock(mutex->mutex) == 0;
     return ret;
 }
 
@@ -104,13 +78,6 @@ int mutex_trylock(mutex_t *mutex)
 
 int mutex_unlock(mutex_t *mutex)
 {
-    int ret;
-
-#ifdef _WIN32
-    ret = ReleaseMutex(mutex->mutex);
-#else
-    ret = pthread_mutex_unlock(mutex->mutex) == 0;
-#endif
-
+    int ret = pthread_mutex_unlock(mutex->mutex) == 0;
     return ret;
 }

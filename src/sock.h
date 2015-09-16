@@ -1,7 +1,7 @@
 /* sock.h
 ** strophe XMPP client library -- socket abstraction header
 **
-** Copyright (C) 2005-2009 Collecta, Inc. 
+** Copyright (C) 2005-2009 Collecta, Inc.
 **
 **  This software is provided AS-IS with no warranty, either express
 **  or implied.
@@ -18,15 +18,7 @@
 
 #include <stdio.h>
 
-#ifndef _WIN32
 typedef int sock_t;
-#else
-#include <winsock2.h>
-typedef SOCKET sock_t;
-#endif
-
-void sock_initialize(void);
-void sock_shutdown(void);
 
 int sock_error(void);
 

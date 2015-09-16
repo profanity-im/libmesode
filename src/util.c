@@ -1,7 +1,7 @@
 /* util.c
 ** strophe XMPP client library -- various utility functions
 **
-** Copyright (C) 2005-2009 Collecta, Inc. 
+** Copyright (C) 2005-2009 Collecta, Inc.
 **
 **  This software is provided AS-IS with no warranty, either express
 **  or implied.
@@ -16,12 +16,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef _WIN32
-#include <winsock2.h>
-#else
 #include <sys/time.h>
 #include <time.h>
-#endif
 
 #include "mesode.h"
 #include "common.h"
@@ -64,15 +60,11 @@ char *xmpp_strdup(const xmpp_ctx_t * const ctx, const char * const s)
  */
 uint64_t time_stamp(void)
 {
-#ifdef _WIN32
-    return timeGetTime();
-#else
     struct timeval tv;
 
     gettimeofday(&tv, NULL);
 
     return (uint64_t)tv.tv_sec * 1000 + (uint64_t)tv.tv_usec / 1000;
-#endif
 }
 
 /** Get the time elapsed between two time stamps.
@@ -92,7 +84,7 @@ uint64_t time_elapsed(uint64_t t1, uint64_t t2)
 
 /** Disconnect the stream with a memory error.
  *  This is a convenience function used internally by various parts of
- *  the Strophe library for terminating the connection because of a 
+ *  the Strophe library for terminating the connection because of a
  *  memory error.
  *
  *  @param conn a Strophe connection object

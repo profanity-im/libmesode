@@ -1,7 +1,7 @@
 /* thread.h
 ** strophe XMPP client library -- thread abstraction header
 **
-** Copyright (C) 2005-2009 Collecta, Inc. 
+** Copyright (C) 2005-2009 Collecta, Inc.
 **
 **  This software is provided AS-IS with no warranty, either express
 **  or implied.
@@ -19,11 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#ifdef _WIN32
-#include <windows.h>
-#else
 #include <pthread.h>
-#endif
 
 #include "mesode.h"
 

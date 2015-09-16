@@ -1,7 +1,7 @@
 /* event.c
 ** strophe XMPP client library -- event loop and management
 **
-** Copyright (C) 2005-2009 Collecta, Inc. 
+** Copyright (C) 2005-2009 Collecta, Inc.
 **
 **  This software is provided AS-IS with no warranty, either express
 **  or implied.
@@ -14,15 +14,15 @@
  */
 
 /** @defgroup EventLoop Event loop
- *  These functions manage the Strophe event loop.  
- *  
+ *  These functions manage the Strophe event loop.
+ *
  *  Simple tools can use xmpp_run() and xmpp_stop() to manage the life
  *  cycle of the program.  A common idiom is to set up a few initial
  *  event handers, call xmpp_run(), and then respond and react to
  *  events as they come in.  At some point, one of the handlers will
  *  call xmpp_stop() to quit the event loop which leads to the program
  *  terminating.
- * 
+ *
  *  More complex programs will have their own event loops, and should
  *  ensure that xmpp_run_once() is called regularly from there.  For
  *  example, a GUI program will already include an event loop to
@@ -34,18 +34,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifndef _WIN32
 #include <sys/select.h>
 #include <errno.h>
 #include <unistd.h>
 #define _sleep(x) usleep(x*1000)
-#else
-#include <winsock2.h>
-#define ETIMEDOUT WSAETIMEDOUT
-#define ECONNRESET WSAECONNRESET
-#define ECONNABORTED WSAECONNABORTED
-#define _sleep(x) Sleep(x)
-#endif
 
 #include <mesode.h>
 #include "common.h"
@@ -164,7 +156,7 @@ void xmpp_run_once(xmpp_ctx_t *ctx, const unsigned long timeout)
 	    conn->error = ECONNABORTED;
 	    conn_disconnect(conn);
 	}
-	
+
 	connitem = connitem->next;
     }
 
@@ -176,7 +168,7 @@ void xmpp_run_once(xmpp_ctx_t *ctx, const unsigned long timeout)
 
 
     /* fire any ready timed handlers, then
-       make sure we don't wait past the time when timed handlers need 
+       make sure we don't wait past the time when timed handlers need
        to be called */
     next = handler_fire_timed(ctx);
 
@@ -184,21 +176,21 @@ void xmpp_run_once(xmpp_ctx_t *ctx, const unsigned long timeout)
     tv.tv_sec = usec / 1000000;
     tv.tv_usec = usec % 1000000;
 
-    FD_ZERO(&rfds); 
+    FD_ZERO(&rfds);
     FD_ZERO(&wfds);
 
     /* find events to watch */
     connitem = ctx->connlist;
     while (connitem) {
 	conn = connitem->conn;
-	
+
 	switch (conn->state) {
 	case XMPP_STATE_CONNECTING:
 	    /* connect has been called and we're waiting for it to complete */
 	    /* connection will give us write or error events */
-	    
+
 	    /* make sure the timeout hasn't expired */
-	    if (time_elapsed(conn->timeout_stamp, time_stamp()) <= 
+	    if (time_elapsed(conn->timeout_stamp, time_stamp()) <=
 		conn->connect_timeout)
 		FD_SET(conn->sock, &wfds);
 	    else {
@@ -215,12 +207,12 @@ void xmpp_run_once(xmpp_ctx_t *ctx, const unsigned long timeout)
 	default:
 	    break;
 	}
-	
+
 	/* Check if there is something in the SSL buffer. */
 	if (conn->tls) {
 	    tls_read_bytes += tls_pending(conn->tls);
 	}
-	
+
 	if (conn->state != XMPP_STATE_DISCONNECTED && conn->sock > max)
 	    max = conn->sock;
 
@@ -239,11 +231,11 @@ void xmpp_run_once(xmpp_ctx_t *ctx, const unsigned long timeout)
     /* select errored */
     if (ret < 0) {
 	if (!sock_is_recoverable(sock_error()))
-	    xmpp_error(ctx, "xmpp", "event watcher internal error %d", 
+	    xmpp_error(ctx, "xmpp", "event watcher internal error %d",
 		       sock_error());
 	return;
     }
-    
+
     /* no events happened */
     if (ret == 0 && tls_read_bytes == 0) return;
 
@@ -268,7 +260,7 @@ void xmpp_run_once(xmpp_ctx_t *ctx, const unsigned long timeout)
 		conn->state = XMPP_STATE_CONNECTED;
 		xmpp_debug(ctx, "xmpp", "connection successful");
 
-		
+
 		/* send stream init */
 		conn_open_stream(conn);
 	    }

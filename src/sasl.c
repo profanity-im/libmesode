@@ -1,7 +1,7 @@
 /* sasl.c
 ** strophe XMPP client library -- SASL authentication helpers
-** 
-** Copyright (C) 2005-2009 Collecta, Inc. 
+**
+** Copyright (C) 2005-2009 Collecta, Inc.
 **
 **  This software is provided AS-IS with no warranty, either express
 **  or implied.
@@ -24,17 +24,12 @@
 #include "sha1.h"
 #include "scram.h"
 
-#ifdef _WIN32
-#define strtok_r strtok_s
-#endif
-
-
 /** generate authentication string for the SASL PLAIN mechanism */
 char *sasl_plain(xmpp_ctx_t *ctx, const char *authid, const char *password) {
     int idlen, passlen;
     char *result = NULL;
     char *msg;
-    
+
     /* our message is Base64(authzid,\0,authid,\0,password)
        if there is no authzid, that field is left empty */
 
@@ -158,7 +153,7 @@ static void _digest_to_hex(const char *digest, char *hex)
 }
 
 /** append 'key="value"' to a buffer, growing as necessary */
-static char *_add_key(xmpp_ctx_t *ctx, hash_t *table, const char *key, 
+static char *_add_key(xmpp_ctx_t *ctx, hash_t *table, const char *key,
 		      char *buf, int *len, int quote)
 {
     int olen,nlen;
@@ -219,7 +214,7 @@ char *sasl_digest_md5(xmpp_ctx_t *ctx, const char *challenge,
     unsigned char digest[16], HA1[16], HA2[16];
     char hex[32];
 
-    /* our digest response is 
+    /* our digest response is
 	Hex( KD( HEX(MD5(A1)),
 	  nonce ':' nc ':' cnonce ':' qop ':' HEX(MD5(A2))
 	))
@@ -259,7 +254,7 @@ char *sasl_digest_md5(xmpp_ctx_t *ctx, const char *challenge,
     memcpy(value+5, domain, strlen(domain));
     value[5+strlen(domain)] = '\0';
     hash_add(table, "digest-uri", value);
-    
+
     /* generate response */
 
     /* construct MD5(node : realm : password) */
@@ -329,16 +324,16 @@ char *sasl_digest_md5(xmpp_ctx_t *ctx, const char *challenge,
     /* construct reply */
     result = NULL;
     rlen = 0;
-    result = _add_key(ctx, table, "username", result, &rlen, 1); 
-    result = _add_key(ctx, table, "realm", result, &rlen, 1); 
-    result = _add_key(ctx, table, "nonce", result, &rlen, 1); 
-    result = _add_key(ctx, table, "cnonce", result, &rlen, 1); 
-    result = _add_key(ctx, table, "nc", result, &rlen, 0); 
-    result = _add_key(ctx, table, "qop", result, &rlen, 0); 
-    result = _add_key(ctx, table, "digest-uri", result, &rlen, 1); 
-    result = _add_key(ctx, table, "response", result, &rlen, 0); 
+    result = _add_key(ctx, table, "username", result, &rlen, 1);
+    result = _add_key(ctx, table, "realm", result, &rlen, 1);
+    result = _add_key(ctx, table, "nonce", result, &rlen, 1);
+    result = _add_key(ctx, table, "cnonce", result, &rlen, 1);
+    result = _add_key(ctx, table, "nc", result, &rlen, 0);
+    result = _add_key(ctx, table, "qop", result, &rlen, 0);
+    result = _add_key(ctx, table, "digest-uri", result, &rlen, 1);
+    result = _add_key(ctx, table, "response", result, &rlen, 0);
     result = _add_key(ctx, table, "charset", result, &rlen, 0);
- 
+
     xmpp_free(ctx, node);
     xmpp_free(ctx, domain);
     hash_release(table); /* also frees value strings */
@@ -478,7 +473,7 @@ static const char _base64_invcharmap[256] = {
     65,65,65,65, 65,65,65,65, 65,65,65,65, 65,65,65,65,
     65,65,65,65, 65,65,65,65, 65,65,65,65, 65,65,65,65,
     65,65,65,65, 65,65,65,65, 65,65,65,65, 65,65,65,65,
-    65,65,65,65, 65,65,65,65, 65,65,65,65, 65,65,65,65 
+    65,65,65,65, 65,65,65,65, 65,65,65,65, 65,65,65,65
 };
 
 /** map of all 6-bit values to their corresponding byte
@@ -501,7 +496,7 @@ int base64_encoded_len(xmpp_ctx_t *ctx, const unsigned len)
     return ((len + 2)/3) << 2;
 }
 
-char *base64_encode(xmpp_ctx_t *ctx, 
+char *base64_encode(xmpp_ctx_t *ctx,
 		    const unsigned char * const buffer, const unsigned len)
 {
     int clen;
@@ -555,7 +550,7 @@ char *base64_encode(xmpp_ctx_t *ctx,
     return cbuf;
 }
 
-int base64_decoded_len(xmpp_ctx_t *ctx, 
+int base64_decoded_len(xmpp_ctx_t *ctx,
 		       const char * const buffer, const unsigned len)
 {
     int nudge;
@@ -571,11 +566,11 @@ int base64_decoded_len(xmpp_ctx_t *ctx,
 	else if (c == 64) {
 	    c = _base64_invcharmap[(int)buffer[len-3]];
 	    if (c < 64) nudge = 2;
-	} 
+	}
     }
     if (nudge < 0) return 0; /* reject bad coding */
 
-    /* decoded steam is 3 bytes for every four */ 
+    /* decoded steam is 3 bytes for every four */
     return 3 * (len >> 2) - nudge;
 }
 
@@ -636,15 +631,15 @@ unsigned char *base64_decode(xmpp_ctx_t *ctx,
 		/* redo the last quartet, checking for correctness */
 		hextet = _base64_invcharmap[(int)buffer[len-4]];
 		if (hextet & 0xC0) goto _base64_decode_error;
-		word = hextet << 10;		
+		word = hextet << 10;
 		hextet = _base64_invcharmap[(int)buffer[len-3]];
 		if (hextet & 0xC0) goto _base64_decode_error;
-		word |= hextet << 4;		
+		word |= hextet << 4;
 		hextet = _base64_invcharmap[(int)buffer[len-2]];
 		if (hextet & 0xC0) goto _base64_decode_error;
 		word |= hextet >> 2;
 		*d++ = (word & 0xFF00) >> 8;
-		*d++ = (word & 0x00FF);		
+		*d++ = (word & 0x00FF);
 		hextet = _base64_invcharmap[(int)buffer[len-1]];
 		if (hextet != 64) goto _base64_decode_error;
 		break;
@@ -653,7 +648,7 @@ unsigned char *base64_decode(xmpp_ctx_t *ctx,
     }
     return dbuf;
 
-_base64_decode_error:	
+_base64_decode_error:
     /* invalid character; abort decoding! */
     xmpp_free(ctx, dbuf);
     return NULL;
@@ -676,7 +671,7 @@ int test_charmap_identity(void)
 	if (u != i) return 1;
     }
 
-    return 0; 
+    return 0;
 }
 
 int test_charmap_range(void)

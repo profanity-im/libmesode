@@ -1,9 +1,9 @@
 /* ctx.c
 ** strophe XMPP client library -- run-time context implementation
 **
-** Copyright (C) 2005-2009 Collecta, Inc. 
+** Copyright (C) 2005-2009 Collecta, Inc.
 **
-**  This software is provided AS-IS with no warranty, either express 
+**  This software is provided AS-IS with no warranty, either express
 **  or implied.
 **
 **  This program is dual licensed under the MIT and GPLv3 licenses.
@@ -36,7 +36,7 @@
  *  result in strange (and platform dependent) behavior.
  *
  *  Specifically, the socket library on Win32 platforms must be initialized
- *  before use (although this is not the case on POSIX systems).  The TLS 
+ *  before use (although this is not the case on POSIX systems).  The TLS
  *  subsystem must also seed the random number generator.
  */
 
@@ -57,7 +57,6 @@
  */
  void xmpp_initialize(void)
 {
-    sock_initialize();
     tls_initialize();
 }
 
@@ -68,7 +67,6 @@
 void xmpp_shutdown(void)
 {
     tls_shutdown();
-    sock_shutdown();
 }
 
 /* version information */
@@ -103,8 +101,8 @@ int xmpp_version_check(int major, int minor)
 
 /* We define the global default allocator, logger, and context here. */
 
-/* Wrap stdlib routines malloc, free, and realloc for default memory 
- * management. 
+/* Wrap stdlib routines malloc, free, and realloc for default memory
+ * management.
  */
 static void *_malloc(const size_t size, void * const userdata)
 {
@@ -187,7 +185,7 @@ static xmpp_log_t xmpp_default_log = { NULL, NULL };
 /* convenience functions for accessing the context */
 
 /** Allocate memory in a Strophe context.
- *  All Strophe functions will use this to allocate memory. 
+ *  All Strophe functions will use this to allocate memory.
  *
  *  @param ctx a Strophe context object
  *  @param size the number of bytes to allocate
@@ -229,7 +227,7 @@ void *xmpp_realloc(const xmpp_ctx_t * const ctx, void *p,
  *  Write a log message to the logger for the context for the specified
  *  level and area.  This function takes a printf-style format string and a
  *  variable argument list (in va_list) format.  This function is not meant
- *  to be called directly, but is used via xmpp_error, xmpp_warn, xmpp_info, 
+ *  to be called directly, but is used via xmpp_error, xmpp_warn, xmpp_info,
  *  and xmpp_debug.
  *
  *  @param ctx a Strophe context object
@@ -281,7 +279,7 @@ void xmpp_log(const xmpp_ctx_t * const ctx,
 
 /** Write to the log at the ERROR level.
  *  This is a convenience function for writing to the log at the
- *  ERROR level.  It takes a printf-style format string followed by a 
+ *  ERROR level.  It takes a printf-style format string followed by a
  *  variable list of arguments for formatting.
  *
  *  @param ctx a Strophe context object
@@ -381,7 +379,7 @@ void xmpp_debug(const xmpp_ctx_t * const ctx,
  *
  *  @ingroup Context
  */
-xmpp_ctx_t *xmpp_ctx_new(const xmpp_mem_t * const mem, 
+xmpp_ctx_t *xmpp_ctx_new(const xmpp_mem_t * const mem,
 			 const xmpp_log_t * const log)
 {
     xmpp_ctx_t *ctx = NULL;
@@ -392,9 +390,9 @@ xmpp_ctx_t *xmpp_ctx_new(const xmpp_mem_t * const mem,
 	ctx = mem->alloc(sizeof(xmpp_ctx_t), mem->userdata);
 
     if (ctx != NULL) {
-	if (mem != NULL) 
+	if (mem != NULL)
 	    ctx->mem = mem;
-	else 
+	else
 	    ctx->mem = &xmpp_default_mem;
 
 	if (log == NULL)
