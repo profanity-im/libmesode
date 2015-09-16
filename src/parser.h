@@ -13,10 +13,10 @@
  *  Internally used functions and structures.
  */
 
-#ifndef __LIBSTROPHE_PARSER_H__
-#define __LIBSTROPHE_PARSER_H__
+#ifndef __LIBMESODE_PARSER_H__
+#define __LIBMESODE_PARSER_H__
 
-#include "strophe.h"
+#include "mesode.h"
 
 typedef struct _parser_t parser_t;
 
@@ -38,4 +38,4 @@ char* parser_attr_name(xmpp_ctx_t *ctx, char *nsname);
 int parser_reset(parser_t *parser);
 int parser_feed(parser_t *parser, char *chunk, int len);
 
-#endif /* __LIBSTROPHE_PARSER_H__ */
+#endif /* __LIBMESODE_PARSER_H__ */

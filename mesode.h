@@ -1,4 +1,4 @@
-/* strophe.h
+/* mesode.h
 ** strophe XMPP client library C API
 **
 ** Copyright (C) 2005-2009 Collecta, Inc.
@@ -13,8 +13,8 @@
  *  Strophe public C API definitions.
  */
 
-#ifndef __LIBSTROPHE_STROPHE_H__
-#define __LIBSTROPHE_STROPHE_H__
+#ifndef __LIBMESODE_MESODE_H__
+#define __LIBMESODE_MESODE_H__
 
 #ifdef __cplusplus
 extern "C" {
@@ -369,4 +369,4 @@ void xmpp_stop(xmpp_ctx_t *ctx);
 }
 #endif
 
-#endif /* __LIBSTROPHE_STROPHE_H__ */
+#endif /* __LIBMESODE_MESODE_H__ */

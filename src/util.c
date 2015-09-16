@@ -23,7 +23,7 @@
 #include <time.h>
 #endif
 
-#include "strophe.h"
+#include "mesode.h"
 #include "common.h"
 #include "ostypes.h"
 #include "util.h"

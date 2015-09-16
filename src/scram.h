@@ -13,8 +13,8 @@
  *  SCRAM-SHA1 helper functions.
  */
 
-#ifndef __LIBSTROPHE_SCRAM_H__
-#define __LIBSTROPHE_SCRAM_H__
+#ifndef __LIBMESODE_SCRAM_H__
+#define __LIBMESODE_SCRAM_H__
 
 /* make sure the stdint.h types are available */
 #include "ostypes.h"
@@ -33,4 +33,4 @@ void SCRAM_SHA1_ClientProof(const uint8_t ClientKey[SHA1_DIGEST_SIZE],
                             const uint8_t ClientSignature[SHA1_DIGEST_SIZE],
                             uint8_t proof[SHA1_DIGEST_SIZE]);
 
-#endif /* __LIBSTROPHE_SCRAM_H__ */
+#endif /* __LIBMESODE_SCRAM_H__ */

@@ -3,12 +3,12 @@ exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-Name: libstrophe
+Name: libmesode
 Description: A simple, lightweight C library for writing XMPP clients
-URL: http://strophe.im/libstrophe/
+URL: https://github.com/boothj5/libmesode
 Version: @VERSION@
 Requires:
 Requires.private: @PC_REQUIRES@
-Libs: -L${libdir} -lstrophe
+Libs: -L${libdir} -lmesode
 Libs.private: @PC_LIBS@
 Cflags: -I${includedir} @PC_CFLAGS@

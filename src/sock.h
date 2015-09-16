@@ -13,8 +13,8 @@
  *  Socket abstraction API.
  */
 
-#ifndef __LIBSTROPHE_SOCK_H__
-#define __LIBSTROPHE_SOCK_H__
+#ifndef __LIBMESODE_SOCK_H__
+#define __LIBMESODE_SOCK_H__
 
 #include <stdio.h>
 
@@ -45,4 +45,4 @@ int sock_srv_lookup(const char *service, const char *proto,
 		     const char *domain, char *resulttarget,
 		     int resulttargetlength, int *resultport);
 
-#endif /* __LIBSTROPHE_SOCK_H__ */
+#endif /* __LIBMESODE_SOCK_H__ */

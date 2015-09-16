@@ -13,14 +13,14 @@
  *  Internally used functions and structures.
  */
 
-#ifndef __LIBSTROPHE_COMMON_H__
-#define __LIBSTROPHE_COMMON_H__
+#ifndef __LIBMESODE_COMMON_H__
+#define __LIBMESODE_COMMON_H__
 
 #include <stdio.h>
 #include <stdarg.h>
 
 
-#include "strophe.h"
+#include "mesode.h"
 #include "ostypes.h"
 #include "sock.h"
 #include "tls.h"
@@ -270,4 +270,4 @@ void auth_handle_component_open(xmpp_conn_t * const conn);
 int xmpp_snprintf (char *str, size_t count, const char *fmt, ...);
 int xmpp_vsnprintf (char *str, size_t count, const char *fmt, va_list arg);
 
-#endif /* __LIBSTROPHE_COMMON_H__ */
+#endif /* __LIBMESODE_COMMON_H__ */

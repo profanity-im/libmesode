@@ -45,7 +45,7 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include "strophe.h"
+#include "mesode.h"
 #include "common.h"
 #include "util.h"
 

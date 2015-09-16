@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "strophe.h"
+#include "mesode.h"
 #include "common.h"
 #include "sasl.h"
 

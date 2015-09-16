@@ -23,7 +23,7 @@
 #include <pthread.h>
 #endif
 
-#include "strophe.h"
+#include "mesode.h"
 #include "common.h"
 #include "thread.h"
 

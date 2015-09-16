@@ -1,5 +1,5 @@
-#ifndef __LIBSTROPHE_TEST_H__
-#define __LIBSTROPHE_TEST_H__
+#ifndef __LIBMESODE_TEST_H__
+#define __LIBMESODE_TEST_H__
 
 #define TEST_MAIN \
     int main(int argc, char **argv) {\
@@ -13,4 +13,4 @@
     }\
       
 
-#endif /* __LIBSTROPHE_TEST_H__ */
+#endif /* __LIBMESODE_TEST_H__ */

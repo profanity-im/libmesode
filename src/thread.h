@@ -13,8 +13,8 @@
  *  Threading abstraction API.
  */
 
-#ifndef __LIBSTROPHE_THREAD_H__
-#define __LIBSTROPHE_THREAD_H__
+#ifndef __LIBMESODE_THREAD_H__
+#define __LIBMESODE_THREAD_H__
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,7 +25,7 @@
 #include <pthread.h>
 #endif
 
-#include "strophe.h"
+#include "mesode.h"
 
 typedef struct _mutex_t mutex_t;
 
@@ -37,4 +37,4 @@ int mutex_lock(mutex_t *mutex);
 int mutex_trylock(mutex_t *mutex);
 int mutex_unlock(mutex_t *mutex);
 
-#endif /* __LIBSTROPHE_THREAD_H__ */
+#endif /* __LIBMESODE_THREAD_H__ */

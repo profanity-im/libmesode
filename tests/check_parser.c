@@ -13,7 +13,7 @@
 
 #include <check.h>
 
-#include <strophe.h>
+#include <mesode.h>
 #include "parser.h"
 
 #include "test.h"

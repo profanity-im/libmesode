@@ -13,8 +13,8 @@
  *  TLS abstraction API.
  */
 
-#ifndef __LIBSTROPHE_TLS_H__
-#define __LIBSTROPHE_TLS_H__
+#ifndef __LIBMESODE_TLS_H__
+#define __LIBMESODE_TLS_H__
 
 #include "common.h"
 #include "sock.h"
@@ -41,4 +41,4 @@ int tls_write(tls_t *tls, const void * const buff, const size_t len);
 int tls_clear_pending_write(tls_t *tls);
 int tls_is_recoverable(int error);
 
-#endif /* __LIBSTROPHE_TLS_H__ */
+#endif /* __LIBMESODE_TLS_H__ */

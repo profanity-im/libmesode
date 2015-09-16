@@ -13,8 +13,8 @@
  *  Internally used utility functions.
  */
 
-#ifndef __LIBSTROPHE_UTIL_H__
-#define __LIBSTROPHE_UTIL_H__
+#ifndef __LIBMESODE_UTIL_H__
+#define __LIBMESODE_UTIL_H__
 
 #include "ostypes.h"
 
@@ -22,4 +22,4 @@
 uint64_t time_stamp(void);
 uint64_t time_elapsed(uint64_t t1, uint64_t t2);
 
-#endif /* __LIBSTROPHE_UTIL_H__ */
+#endif /* __LIBMESODE_UTIL_H__ */

@@ -13,10 +13,10 @@
  * SASL authentication helpers.
  */
 
-#ifndef __LIBSTROPHE_SASL_H__
-#define __LIBSTROPHE_SASL_H__
+#ifndef __LIBMESODE_SASL_H__
+#define __LIBMESODE_SASL_H__
 
-#include "strophe.h"
+#include "mesode.h"
 
 /** low-level sasl routines */
 

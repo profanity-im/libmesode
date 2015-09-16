@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "strophe.h"
+#include "mesode.h"
 #include "common.h"
 
 static int log_called = 0;

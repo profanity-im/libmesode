@@ -13,7 +13,7 @@
 #include <string.h>
 #include <time.h>
 
-#include "strophe.h"
+#include "mesode.h"
 #include "common.h"
 #include "hash.h"
 

@@ -14,8 +14,8 @@
  *  Type definitions for platforms without stdint.h.
  */
 
-#ifndef __LIBSTROPHE_OSTYPES_H__
-#define __LIBSTROPHE_OSTYPES_H__
+#ifndef __LIBMESODE_OSTYPES_H__
+#define __LIBMESODE_OSTYPES_H__
 
 #if defined (_MSC_VER) && _MSC_VER < 1600
 typedef signed char int8_t;
@@ -31,4 +31,4 @@ typedef unsigned __int64 uint64_t;
 #include <stdint.h>
 #endif
 
-#endif /* __LIBSTROPHE_OSTYPES_H__ */
+#endif /* __LIBMESODE_OSTYPES_H__ */

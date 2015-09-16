@@ -11,7 +11,7 @@
 
 #include <stdio.h>
 
-#include <strophe.h>
+#include <mesode.h>
 
 
 /* define a handler for connection events */
