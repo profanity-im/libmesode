@@ -75,6 +75,8 @@ hex_encode(unsigned char* readbuf, void *writebuf, size_t len)
 }
 
 static xmpp_ctx_t *xmppctx;
+static int cert_handled;
+static int last_cb_res;
 
 static void
 print_certificate(X509* cert) {
@@ -139,6 +141,8 @@ verify_callback(int preverify_ok, X509_STORE_CTX *x509_ctx)
     if (preverify_ok) {
         xmpp_debug(xmppctx, "TLS", "VERIFY SUCCESS");
         return 1;
+    } else if (cert_handled) {
+        return last_cb_res;
     } else {
         xmpp_debug(xmppctx, "TLS", "VERIFY FAILED");
 
@@ -149,6 +153,8 @@ verify_callback(int preverify_ok, X509_STORE_CTX *x509_ctx)
         int cb_res = xmppctx->connlist->conn->certfail_handler(issuernameline, strbuf, not_before_str, not_after_str, errstr);
         OPENSSL_free(issuernameline);
 
+        cert_handled = 1;
+        last_cb_res = cb_res;
         return cb_res;
     }
 }
@@ -156,6 +162,8 @@ verify_callback(int preverify_ok, X509_STORE_CTX *x509_ctx)
 tls_t *tls_new(xmpp_ctx_t *ctx, sock_t sock)
 {
     xmppctx = ctx;
+    cert_handled = 0;
+    last_cb_res = 0;
     tls_t *tls = xmpp_alloc(ctx, sizeof(*tls));
 
     if (tls) {
