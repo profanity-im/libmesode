@@ -66,7 +66,7 @@ int main(int argc, char **argv)
     xmpp_conn_set_pass(conn, pass);
 
     /* initiate connection */
-    xmpp_connect_client(conn, host, 0, conn_handler, ctx);
+    xmpp_connect_client(conn, host, 0, NULL, conn_handler, ctx);
 
     /* enter the event loop -
        our connect handler will trigger an exit */
