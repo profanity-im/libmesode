@@ -105,13 +105,13 @@ verify_callback(int preverify_ok, X509_STORE_CTX *x509_ctx)
     xmpp_debug(xmppctx, "TLS", "ENDSTACK");
 
     X509_NAME *subject = X509_get_subject_name(cert);
-    char *issuernameline = X509_NAME_oneline(subject, NULL, 0);
-    xmpp_debug(xmppctx, "TLS", "SUBJECT     : %s", issuernameline);
+    char *subjectname = X509_NAME_oneline(subject, NULL, 0);
+    xmpp_debug(xmppctx, "TLS", "SUBJECT     : %s", subjectname);
 
     X509_NAME *issuer = X509_get_issuer_name(cert);
-    char *subjectnameline = X509_NAME_oneline(issuer, NULL, 0);
-    xmpp_debug(xmppctx, "TLS", "ISSUER      : %s", subjectnameline);
-    OPENSSL_free(subjectnameline);
+    char *issuername = X509_NAME_oneline(issuer, NULL, 0);
+    xmpp_debug(xmppctx, "TLS", "ISSUER      : %s", issuername);
+    OPENSSL_free(issuername);
 
     ASN1_TIME *not_before = X509_get_notBefore(cert);
     char not_before_str[128];
@@ -150,8 +150,8 @@ verify_callback(int preverify_ok, X509_STORE_CTX *x509_ctx)
         const char *errstr = X509_verify_cert_error_string(err);
         xmpp_debug(xmppctx, "TLS", "ERROR: %s", errstr);
 
-        int cb_res = xmppctx->connlist->conn->certfail_handler(issuernameline, strbuf, not_before_str, not_after_str, errstr);
-        OPENSSL_free(issuernameline);
+        int cb_res = xmppctx->connlist->conn->certfail_handler(subjectname, strbuf, not_before_str, not_after_str, errstr);
+        OPENSSL_free(subjectname);
 
         cert_handled = 1;
         last_cb_res = cb_res;
