@@ -107,6 +107,7 @@ xmpp_conn_t *xmpp_conn_new(xmpp_ctx_t * const ctx)
 
 	conn->tls_support = 0;
 	conn->tls_disabled = 0;
+    conn->tls_cert_path = NULL;
 	conn->tls_failed = 0;
 	conn->sasl_support = 0;
         conn->secured = 0;
@@ -271,6 +272,7 @@ int xmpp_conn_release(xmpp_conn_t * const conn)
 	if (conn->pass) xmpp_free(ctx, conn->pass);
 	if (conn->stream_id) xmpp_free(ctx, conn->stream_id);
 	if (conn->lang) xmpp_free(ctx, conn->lang);
+    if (conn->tls_cert_path) xmpp_free(ctx, conn->tls_cert_path);
 	xmpp_free(ctx, conn);
 	released = 1;
     }
@@ -742,6 +744,11 @@ void conn_open_stream(xmpp_conn_t * const conn)
 void xmpp_conn_disable_tls(xmpp_conn_t * const conn)
 {
     conn->tls_disabled = 1;
+}
+
+void xmpp_conn_tlscert_path(xmpp_conn_t * const conn, char *path)
+{
+    conn->tls_cert_path = xmpp_strdup(conn->ctx, path);
 }
 
 static void _log_open_tag(xmpp_conn_t *conn, char **attrs)
