@@ -1,0 +1,3 @@
+#!/bin/sh
+
+./configure CFLAGS='-g3 -O0' CXXFLAGS='-g3 -O0' $@
