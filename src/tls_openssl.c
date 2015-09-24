@@ -105,6 +105,9 @@ verify_callback(int preverify_ok, X509_STORE_CTX *x509_ctx)
     if (preverify_ok) {
         return 1;
     } else if (cert_handled) {
+        if (last_cb_res == 0) {
+            X509_STORE_CTX_set_error(x509_ctx, X509_V_ERR_APPLICATION_VERIFICATION);
+        }
         return last_cb_res;
     } else {
         int err = X509_STORE_CTX_get_error(x509_ctx);
@@ -143,6 +146,11 @@ verify_callback(int preverify_ok, X509_STORE_CTX *x509_ctx)
 
         cert_handled = 1;
         last_cb_res = cb_res;
+
+        if (cb_res == 0) {
+            X509_STORE_CTX_set_error(x509_ctx, X509_V_ERR_APPLICATION_VERIFICATION);
+        }
+
         return cb_res;
     }
 }
