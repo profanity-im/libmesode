@@ -92,12 +92,12 @@ static int
 verify_callback(int preverify_ok, X509_STORE_CTX *x509_ctx)
 {
     const STACK_OF(X509) *sk = X509_STORE_CTX_get1_chain(x509_ctx);
-    int slen = sk_num((const _STACK *)sk);
+    int slen = sk_X509_num(sk);
     unsigned i;
     X509 *certsk;
     xmpp_debug(xmppctx, "TLS", "STACK");
     for(i=0; i<slen; i++) {
-        certsk = (X509*) sk_value((const _STACK *)sk, i);
+        certsk = sk_X509_value(sk, i);
         print_certificate(certsk);
     }
     xmpp_debug(xmppctx, "TLS", "ENDSTACK");
@@ -112,7 +112,7 @@ verify_callback(int preverify_ok, X509_STORE_CTX *x509_ctx)
         xmpp_debug(xmppctx, "TLS", "ERROR: %s", errstr);
 
         X509 *user_cert;
-        user_cert = (X509*) sk_value((const _STACK *)sk, 0);
+        user_cert = sk_X509_value(sk, 0);
         X509_NAME *usersubject = X509_get_subject_name(user_cert);
         char *usersubjectname = X509_NAME_oneline(usersubject, NULL, 0);
 
