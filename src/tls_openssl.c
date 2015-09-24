@@ -124,7 +124,7 @@ verify_callback(int preverify_ok, X509_STORE_CTX *x509_ctx)
         char user_not_after_str[128];
         int user_not_after_res = convert_ASN1TIME(user_not_after, user_not_after_str, 128);
 
-        char buf[20];
+        unsigned char buf[20];
         const EVP_MD *digest = EVP_sha1();
         unsigned len;
         int rc = X509_digest(user_cert, digest, (unsigned char*) buf, &len);
