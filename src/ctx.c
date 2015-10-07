@@ -402,6 +402,11 @@ xmpp_ctx_t *xmpp_ctx_new(const xmpp_mem_t * const mem,
 
 	ctx->connlist = NULL;
 	ctx->loop_status = XMPP_LOOP_NOTSTARTED;
+	ctx->rand = xmpp_rand_new(ctx);
+	if (ctx->rand == NULL) {
+	    xmpp_free(ctx, ctx);
+	    ctx = NULL;
+	}
     }
 
     return ctx;
@@ -416,6 +421,7 @@ xmpp_ctx_t *xmpp_ctx_new(const xmpp_mem_t * const mem,
 void xmpp_ctx_free(xmpp_ctx_t * const ctx)
 {
     /* mem and log are owned by their suppliers */
+    xmpp_rand_free(ctx, ctx->rand);
     xmpp_free(ctx, ctx); /* pull the hole in after us */
 }
 
