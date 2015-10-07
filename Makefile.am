@@ -23,10 +23,10 @@ libmesode_la_SOURCES = src/auth.c src/conn.c src/ctx.c \
 	src/event.c src/handler.c src/hash.c \
 	src/jid.c src/md5.c src/sasl.c src/scram.c src/sha1.c \
 	src/snprintf.c src/sock.c src/stanza.c src/thread.c \
-	src/tls_openssl.c src/util.c \
+	src/tls_openssl.c src/util.c src/rand.c \
 	src/common.h src/hash.h src/md5.h src/ostypes.h src/parser.h \
 	src/sasl.h src/scram.h src/sha1.h src/sock.h src/thread.h src/tls.h \
-	src/util.h
+	src/util.h src/rand.h
 
 libmesode_la_SOURCES += src/parser_expat.c
 
@@ -56,10 +56,14 @@ examples_component_LDADD = $(MESODE_LIBS)
 
 
 ## Tests
-TESTS = tests/check_parser
-check_PROGRAMS = tests/check_parser
+TESTS = tests/check_parser tests/test_rand
+check_PROGRAMS = tests/check_parser tests/test_rand
+
 tests_check_parser_SOURCES = tests/check_parser.c tests/test.h
 tests_check_parser_CFLAGS = @check_CFLAGS@ $(PARSER_CFLAGS) $(MESODE_FLAGS) \
 	-I$(top_srcdir)/src
 tests_check_parser_LDADD = @check_LIBS@ $(MESODE_LIBS)
 tests_check_parser_LDFLAGS = -static
+
+tests_test_rand_SOURCES = tests/test_rand.c src/sha1.c
+tests_test_rand_CFLAGS = $(STROPHE_FLAGS) -I$(top_srcdir)/src
