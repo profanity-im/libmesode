@@ -49,34 +49,36 @@ sock_t sock_connect(const char * const host, const unsigned int port)
     struct addrinfo *res, *ainfo, hints;
     int err;
 
-    sock = -1;
-
     snprintf(service, 6, "%u", port);
 
     memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_family = AF_INET;
+    hints.ai_family = AF_UNSPEC;
+#ifdef AI_ADDRCONFIG
+    hints.ai_flags = AI_ADDRCONFIG;
+#endif /* AI_ADDRCONFIG */
     hints.ai_protocol = IPPROTO_TCP;
     hints.ai_socktype = SOCK_STREAM;
 
-    if ((err = getaddrinfo(host, service, &hints, &res)) != 0)
-	return -1;
+    err = getaddrinfo(host, service, &hints, &res);
+    if (err != 0)
+        return -1;
 
-    ainfo = res;
-    while (ainfo) {
-	if ((sock = socket(ainfo->ai_family, ainfo->ai_socktype,
-		   ainfo->ai_protocol)) >= 0) {
-	    sock_set_nonblocking(sock);
+    for (ainfo = res; ainfo != NULL; ainfo = ainfo->ai_next) {
+        sock = socket(ainfo->ai_family, ainfo->ai_socktype, ainfo->ai_protocol);
+        if (sock < 0)
+            continue;
 
-	    err = connect(sock, ainfo->ai_addr, ainfo->ai_addrlen);
+        err = sock_set_nonblocking(sock);
+        if (err == 0) {
+            err = connect(sock, ainfo->ai_addr, ainfo->ai_addrlen);
+            if (err == 0 || _in_progress(sock_error()))
+                break;
+        }
 
-	    if ((err == 0) || (err < 0 && _in_progress(sock_error())))
-		break;
-	}
-
-	ainfo = ainfo->ai_next;
+        close(sock);
     }
-
-    if (res) freeaddrinfo(res);
+    freeaddrinfo(res);
+    sock = ainfo == NULL ? -1 : sock;
 
     return sock;
 }
@@ -88,12 +90,24 @@ int sock_close(const sock_t sock)
 
 int sock_set_blocking(const sock_t sock)
 {
-    return fcntl(sock, F_SETFL, 0);
+    int rc;
+
+    rc = fcntl(sock, F_GETFL, NULL);
+    if (rc >= 0) {
+        rc = fcntl(sock, F_SETFL, rc & (~O_NONBLOCK));
+    }
+    return rc;
 }
 
 int sock_set_nonblocking(const sock_t sock)
 {
-    return fcntl(sock, F_SETFL, O_NONBLOCK);
+    int rc;
+
+    rc = fcntl(sock, F_GETFL, NULL);
+    if (rc >= 0) {
+        rc = fcntl(sock, F_SETFL, rc | O_NONBLOCK);
+    }
+    return rc;
 }
 
 int sock_read(const sock_t sock, void * const buff, const size_t len)
@@ -114,18 +128,18 @@ int sock_is_recoverable(const int error)
 int sock_connect_error(const sock_t sock)
 {
     struct sockaddr sa;
-    unsigned len;
+    socklen_t len;
     char temp;
 
-    sa.sa_family = AF_INET;
-
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_family = AF_UNSPEC;
     len = sizeof(sa);
 
     /* we don't actually care about the peer name, we're just checking if
      * we're connected or not */
     if (getpeername(sock, &sa, &len) == 0)
     {
-	return 0;
+        return 0;
     }
 
     /* it's possible that the error wasn't ENOTCONN, so if it wasn't,

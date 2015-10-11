@@ -33,7 +33,6 @@ PKG_CHECK_MODULES([expat], [expat >= 2.0.0],
                                    [AC_MSG_ERROR([expat not found; expat required.])]
                                   )
                   ])
-
 with_parser=expat
 PARSER_NAME=expat
 PARSER_CFLAGS=$expat_CFLAGS
