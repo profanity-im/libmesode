@@ -16,6 +16,8 @@
 #ifndef __LIBMESODE_MESODE_H__
 #define __LIBMESODE_MESODE_H__
 
+#include <stddef.h>     /* size_t */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -218,6 +220,8 @@ void xmpp_conn_set_pass(xmpp_conn_t * const conn, const char * const pass);
 xmpp_ctx_t* xmpp_conn_get_context(xmpp_conn_t * const conn);
 void xmpp_conn_disable_tls(xmpp_conn_t * const conn);
 void xmpp_conn_tlscert_path(xmpp_conn_t * const conn, char *path);
+void xmpp_conn_set_old_style_ssl(xmpp_conn_t * const conn);
+int xmpp_conn_is_secured(xmpp_conn_t * const conn);
 
 int xmpp_connect_client(xmpp_conn_t * const conn,
 			  const char * const altdomain,
@@ -366,6 +370,9 @@ void xmpp_message_set_body();
 void xmpp_iq_new();
 void xmpp_presence_new();
 */
+
+/** UUID **/
+char *xmpp_uuid_gen(xmpp_ctx_t *ctx);
 
 /** event loop **/
 void xmpp_run_once(xmpp_ctx_t *ctx, const unsigned long  timeout);

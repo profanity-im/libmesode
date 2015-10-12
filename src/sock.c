@@ -489,12 +489,16 @@ void netbuf_get_dnsquery_resourcerecord(unsigned char *buf, int buflen, int *off
 }
 
 
-int sock_srv_lookup(const char *service, const char *proto, const char *domain, char *resulttarget, int resulttargetlength, int *resultport)
+int sock_srv_lookup(const char *service, const char *proto,
+                    const char *domain, char *resulttarget,
+                    int resulttargetlength, int *resultport)
 {
     int set = 0;
     char fulldomain[2048];
 
-    snprintf(fulldomain, 2048, "_%s._%s.%s", service, proto, domain);
+    snprintf(fulldomain, sizeof(fulldomain),
+             "_%s._%s.%s", service, proto, domain);
+
     if (!set) {
         unsigned char buf[65535];
 	int len;
@@ -532,12 +536,5 @@ int sock_srv_lookup(const char *service, const char *proto, const char *domain, 
 	}
     }
 
-    if (!set)
-    {
-	snprintf(resulttarget, resulttargetlength, "%s", domain);
-	*resultport = 5222;
-	return 0;
-    }
-
-    return 1;
+    return set;
 }

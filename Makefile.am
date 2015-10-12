@@ -23,7 +23,7 @@ libmesode_la_SOURCES = src/auth.c src/conn.c src/ctx.c \
 	src/event.c src/handler.c src/hash.c \
 	src/jid.c src/md5.c src/sasl.c src/scram.c src/sha1.c \
 	src/snprintf.c src/sock.c src/stanza.c src/thread.c \
-	src/tls_openssl.c src/util.c src/rand.c \
+	src/tls_openssl.c src/util.c src/rand.c src/uuid.c \
 	src/common.h src/hash.h src/md5.h src/ostypes.h src/parser.h \
 	src/sasl.h src/scram.h src/sha1.h src/sock.h src/thread.h src/tls.h \
 	src/util.h src/rand.h
@@ -37,7 +37,8 @@ pkgconfig_DATA = libmesode.pc
 EXTRA_DIST = docs
 
 ## Examples
-noinst_PROGRAMS = examples/active examples/roster examples/basic examples/bot examples/component
+noinst_PROGRAMS = examples/active examples/roster examples/basic examples/bot \
+	examples/component examples/uuid
 examples_active_SOURCES = examples/active.c
 examples_active_CFLAGS = $(MESODE_FLAGS)
 examples_active_LDADD = $(MESODE_LIBS) 
@@ -53,7 +54,9 @@ examples_bot_LDADD = $(MESODE_LIBS)
 examples_component_SOURCES = examples/component.c
 examples_component_CFLAGS = $(MESODE_FLAGS)
 examples_component_LDADD = $(MESODE_LIBS)
-
+examples_uuid_SOURCES = examples/uuid.c
+examples_uuid_CFLAGS = $(MESODE_FLAGS)
+examples_uuid_LDADD = $(MESODE_LIBS)
 
 ## Tests
 TESTS = tests/check_parser tests/test_rand tests/test_scram
