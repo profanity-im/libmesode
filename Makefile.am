@@ -25,8 +25,8 @@ libmesode_la_SOURCES = src/auth.c src/conn.c src/ctx.c \
 	src/snprintf.c src/sock.c src/stanza.c src/thread.c \
 	src/tls_openssl.c src/util.c src/rand.c src/uuid.c \
 	src/common.h src/hash.h src/md5.h src/ostypes.h src/parser.h \
-	src/sasl.h src/scram.h src/sha1.h src/sock.h src/thread.h src/tls.h \
-	src/util.h src/rand.h
+	src/sasl.h src/scram.h src/sha1.h src/snprintf.h src/sock.h \
+	src/thread.h src/tls.h src/util.h src/rand.h
 
 libmesode_la_SOURCES += src/parser_expat.c
 
@@ -59,8 +59,9 @@ examples_uuid_CFLAGS = $(MESODE_FLAGS)
 examples_uuid_LDADD = $(MESODE_LIBS)
 
 ## Tests
-TESTS = tests/check_parser tests/test_rand tests/test_scram
-check_PROGRAMS = tests/check_parser tests/test_rand tests/test_scram
+TESTS = tests/check_parser tests/test_sha1 tests/test_rand tests/test_scram \
+	tests/test_base64 tests/test_snprintf
+check_PROGRAMS = $(TESTS)
 
 tests_check_parser_SOURCES = tests/check_parser.c tests/test.h
 tests_check_parser_CFLAGS = @check_CFLAGS@ $(PARSER_CFLAGS) $(MESODE_FLAGS) \
@@ -68,8 +69,19 @@ tests_check_parser_CFLAGS = @check_CFLAGS@ $(PARSER_CFLAGS) $(MESODE_FLAGS) \
 tests_check_parser_LDADD = @check_LIBS@ $(MESODE_LIBS)
 tests_check_parser_LDFLAGS = -static
 
-tests_test_rand_SOURCES = tests/test_rand.c src/sha1.c
+tests_test_base64_SOURCES = tests/test_base64.c tests/test.c tests/test.h
+tests_test_base64_CFLAGS = $(MESODE_FLAGS) -I$(top_srcdir)/src
+tests_test_base64_LDADD = $(MESODE_LIBS)
+tests_test_base64_LDFLAGS = -static
+
+tests_test_rand_SOURCES = tests/test_rand.c tests/test.c src/sha1.c
 tests_test_rand_CFLAGS = $(MESODE_FLAGS) -I$(top_srcdir)/src
 
-tests_test_scram_SOURCES = tests/test_scram.c src/sha1.c
+tests_test_scram_SOURCES = tests/test_scram.c tests/test.c src/sha1.c
 tests_test_scram_CFLAGS = $(MESODE_FLAGS) -I$(top_srcdir)/src
+
+tests_test_sha1_SOURCES = tests/test_sha1.c src/sha1.c
+tests_test_sha1_CFLAGS = -I$(top_srcdir)/src
+
+tests_test_snprintf_SOURCES = tests/test_snprintf.c
+tests_test_snprintf_CFLAGS = -I$(top_srcdir)/src
