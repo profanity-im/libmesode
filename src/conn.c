@@ -48,7 +48,7 @@
 #endif
 
 static int _disconnect_cleanup(xmpp_conn_t * const conn,
-			       void * const userdata);
+                               void * const userdata);
 
 static void _handle_stream_start(char *name, char **attrs,
                                  void * const userdata);
@@ -72,53 +72,53 @@ xmpp_conn_t *xmpp_conn_new(xmpp_ctx_t * const ctx)
     xmpp_connlist_t *tail, *item;
 
     if (ctx == NULL) return NULL;
-	conn = xmpp_alloc(ctx, sizeof(xmpp_conn_t));
 
+    conn = xmpp_alloc(ctx, sizeof(xmpp_conn_t));
     if (conn != NULL) {
-	conn->ctx = ctx;
+        conn->ctx = ctx;
 
-	conn->type = XMPP_UNKNOWN;
+        conn->type = XMPP_UNKNOWN;
         conn->state = XMPP_STATE_DISCONNECTED;
-	conn->sock = -1;
-	conn->tls = NULL;
-	conn->timeout_stamp = 0;
-	conn->error = 0;
-	conn->stream_error = NULL;
+        conn->sock = -1;
+        conn->tls = NULL;
+        conn->timeout_stamp = 0;
+        conn->error = 0;
+        conn->stream_error = NULL;
 
-	/* default send parameters */
-	conn->blocking_send = 0;
-	conn->send_queue_max = DEFAULT_SEND_QUEUE_MAX;
-	conn->send_queue_len = 0;
-	conn->send_queue_head = NULL;
-	conn->send_queue_tail = NULL;
+        /* default send parameters */
+        conn->blocking_send = 0;
+        conn->send_queue_max = DEFAULT_SEND_QUEUE_MAX;
+        conn->send_queue_len = 0;
+        conn->send_queue_head = NULL;
+        conn->send_queue_tail = NULL;
 
-	/* default timeouts */
-	conn->connect_timeout = CONNECT_TIMEOUT;
+        /* default timeouts */
+        conn->connect_timeout = CONNECT_TIMEOUT;
 
-	conn->lang = xmpp_strdup(conn->ctx, "en");
-	if (!conn->lang) {
-	    xmpp_free(conn->ctx, conn);
-	    return NULL;
-	}
-	conn->domain = NULL;
-	conn->jid = NULL;
-	conn->pass = NULL;
-	conn->stream_id = NULL;
+        conn->lang = xmpp_strdup(conn->ctx, "en");
+        if (!conn->lang) {
+            xmpp_free(conn->ctx, conn);
+            return NULL;
+        }
+        conn->domain = NULL;
+        conn->jid = NULL;
+        conn->pass = NULL;
+        conn->stream_id = NULL;
         conn->bound_jid = NULL;
 
-	conn->tls_support = 0;
-	conn->tls_disabled = 0;
-    conn->tls_cert_path = NULL;
-	conn->tls_mandatory = 0;
-	conn->tls_legacy_ssl = 0;
-	conn->tls_failed = 0;
-	conn->sasl_support = 0;
+        conn->tls_cert_path = NULL;
+        conn->tls_support = 0;
+        conn->tls_disabled = 0;
+        conn->tls_mandatory = 0;
+        conn->tls_legacy_ssl = 0;
+        conn->tls_failed = 0;
+        conn->sasl_support = 0;
         conn->secured = 0;
 
-	conn->bind_required = 0;
-	conn->session_required = 0;
+        conn->bind_required = 0;
+        conn->session_required = 0;
 
-	conn->parser = parser_new(conn->ctx,
+        conn->parser = parser_new(conn->ctx,
                                   _handle_stream_start,
                                   _handle_stream_end,
                                   _handle_stream_stanza,
@@ -126,35 +126,35 @@ xmpp_conn_t *xmpp_conn_new(xmpp_ctx_t * const ctx)
         conn->reset_parser = 0;
         conn_prepare_reset(conn, auth_handle_open);
 
-	conn->authenticated = 0;
-	conn->conn_handler = NULL;
-	conn->userdata = NULL;
-	conn->timed_handlers = NULL;
-	/* we own (and will free) the hash values */
-	conn->id_handlers = hash_new(conn->ctx, 32, NULL);
-	conn->handlers = NULL;
+        conn->authenticated = 0;
+        conn->conn_handler = NULL;
+        conn->userdata = NULL;
+        conn->timed_handlers = NULL;
+        /* we own (and will free) the hash values */
+        conn->id_handlers = hash_new(conn->ctx, 32, NULL);
+        conn->handlers = NULL;
 
-	/* give the caller a reference to connection */
-	conn->ref = 1;
+        /* give the caller a reference to connection */
+        conn->ref = 1;
 
-	/* add connection to ctx->connlist */
-	tail = conn->ctx->connlist;
-	while (tail && tail->next) tail = tail->next;
+        /* add connection to ctx->connlist */
+        tail = conn->ctx->connlist;
+        while (tail && tail->next) tail = tail->next;
 
-	item = xmpp_alloc(conn->ctx, sizeof(xmpp_connlist_t));
-	if (!item) {
-	    xmpp_error(conn->ctx, "xmpp", "failed to allocate memory");
-	    xmpp_free(conn->ctx, conn->lang);
+        item = xmpp_alloc(conn->ctx, sizeof(xmpp_connlist_t));
+        if (!item) {
+            xmpp_error(conn->ctx, "xmpp", "failed to allocate memory");
+            xmpp_free(conn->ctx, conn->lang);
             parser_free(conn->parser);
-	    xmpp_free(conn->ctx, conn);
-	    conn = NULL;
-	} else {
-	    item->conn = conn;
-	    item->next = NULL;
+            xmpp_free(conn->ctx, conn);
+            conn = NULL;
+        } else {
+            item->conn = conn;
+            item->next = NULL;
 
-	    if (tail) tail->next = item;
-	    else conn->ctx->connlist = item;
-	}
+            if (tail) tail->next = item;
+            else conn->ctx->connlist = item;
+        }
     }
 
     return conn;
@@ -195,89 +195,88 @@ int xmpp_conn_release(xmpp_conn_t * const conn)
     int released = 0;
 
     if (conn->ref > 1)
-	conn->ref--;
+        conn->ref--;
     else {
-	ctx = conn->ctx;
+        ctx = conn->ctx;
 
-	/* remove connection from context's connlist */
-	if (ctx->connlist->conn == conn) {
-	    item = ctx->connlist;
-	    ctx->connlist = item->next;
-	    xmpp_free(ctx, item);
-	} else {
-	    prev = NULL;
-	    item = ctx->connlist;
-	    while (item && item->conn != conn) {
-		prev = item;
-		item = item->next;
-	    }
+        /* remove connection from context's connlist */
+        if (ctx->connlist->conn == conn) {
+            item = ctx->connlist;
+            ctx->connlist = item->next;
+            xmpp_free(ctx, item);
+        } else {
+            prev = NULL;
+            item = ctx->connlist;
+            while (item && item->conn != conn) {
+                prev = item;
+                item = item->next;
+            }
 
-	    if (!item) {
-		xmpp_error(ctx, "xmpp", "Connection not in context's list\n");
-	    } else {
-		prev->next = item->next;
-		xmpp_free(ctx, item);
-	    }
-	}
+            if (!item) {
+                xmpp_error(ctx, "xmpp", "Connection not in context's list\n");
+            } else {
+                prev->next = item->next;
+                xmpp_free(ctx, item);
+            }
+        }
 
-	/* free handler stuff
-	 * note that userdata is the responsibility of the client
-	 * and the handler pointers don't need to be freed since they
-	 * are pointers to functions */
+        /* free handler stuff
+         * note that userdata is the responsibility of the client
+         * and the handler pointers don't need to be freed since they
+         * are pointers to functions */
 
-	hlitem = conn->timed_handlers;
-	while (hlitem) {
-	    thli = hlitem;
-	    hlitem = hlitem->next;
+        hlitem = conn->timed_handlers;
+        while (hlitem) {
+            thli = hlitem;
+            hlitem = hlitem->next;
 
-	    xmpp_free(ctx, thli);
-	}
+            xmpp_free(ctx, thli);
+        }
 
-	/* id handlers
-	 * we have to traverse the hash table freeing list elements
-	 * then release the hash table */
-	iter = hash_iter_new(conn->id_handlers);
-	while ((key = hash_iter_next(iter))) {
-	    hlitem = (xmpp_handlist_t *)hash_get(conn->id_handlers, key);
-	    while (hlitem) {
-		thli = hlitem;
-		hlitem = hlitem->next;
-		xmpp_free(conn->ctx, thli->id);
-		xmpp_free(conn->ctx, thli);
-	    }
-	}
-	hash_iter_release(iter);
-	hash_release(conn->id_handlers);
+        /* id handlers
+         * we have to traverse the hash table freeing list elements
+         * then release the hash table */
+        iter = hash_iter_new(conn->id_handlers);
+        while ((key = hash_iter_next(iter))) {
+            hlitem = (xmpp_handlist_t *)hash_get(conn->id_handlers, key);
+            while (hlitem) {
+                thli = hlitem;
+                hlitem = hlitem->next;
+                xmpp_free(conn->ctx, thli->id);
+                xmpp_free(conn->ctx, thli);
+            }
+        }
+        hash_iter_release(iter);
+        hash_release(conn->id_handlers);
 
-	hlitem = conn->handlers;
-	while (hlitem) {
-	    thli = hlitem;
-	    hlitem = hlitem->next;
+        hlitem = conn->handlers;
+        while (hlitem) {
+            thli = hlitem;
+            hlitem = hlitem->next;
 
-	    if (thli->ns) xmpp_free(ctx, thli->ns);
-	    if (thli->name) xmpp_free(ctx, thli->name);
-	    if (thli->type) xmpp_free(ctx, thli->type);
-	    xmpp_free(ctx, thli);
-	}
+            if (thli->ns) xmpp_free(ctx, thli->ns);
+            if (thli->name) xmpp_free(ctx, thli->name);
+            if (thli->type) xmpp_free(ctx, thli->type);
+            xmpp_free(ctx, thli);
+        }
 
-	if (conn->stream_error) {
-	    xmpp_stanza_release(conn->stream_error->stanza);
-	    if (conn->stream_error->text)
-		xmpp_free(ctx, conn->stream_error->text);
-	    xmpp_free(ctx, conn->stream_error);
-	}
+        if (conn->stream_error) {
+            xmpp_stanza_release(conn->stream_error->stanza);
+            if (conn->stream_error->text)
+                xmpp_free(ctx, conn->stream_error->text);
+            xmpp_free(ctx, conn->stream_error);
+        }
 
         parser_free(conn->parser);
 
-	if (conn->domain) xmpp_free(ctx, conn->domain);
-	if (conn->jid) xmpp_free(ctx, conn->jid);
-	if (conn->bound_jid) xmpp_free(ctx, conn->bound_jid);
-	if (conn->pass) xmpp_free(ctx, conn->pass);
-	if (conn->stream_id) xmpp_free(ctx, conn->stream_id);
-	if (conn->lang) xmpp_free(ctx, conn->lang);
-    if (conn->tls_cert_path) xmpp_free(ctx, conn->tls_cert_path);
-	xmpp_free(ctx, conn);
-	released = 1;
+        if (conn->domain) xmpp_free(ctx, conn->domain);
+        if (conn->jid) xmpp_free(ctx, conn->jid);
+        if (conn->bound_jid) xmpp_free(ctx, conn->bound_jid);
+        if (conn->pass) xmpp_free(ctx, conn->pass);
+        if (conn->stream_id) xmpp_free(ctx, conn->stream_id);
+        if (conn->lang) xmpp_free(ctx, conn->lang);
+        xmpp_free(ctx, conn);
+        released = 1;
     }
 
     return released;
@@ -368,7 +367,7 @@ void xmpp_conn_set_pass(xmpp_conn_t * const conn, const char * const pass)
 */
 xmpp_ctx_t* xmpp_conn_get_context(xmpp_conn_t * const conn)
 {
-	return conn->ctx;
+        return conn->ctx;
 }
 
 /** Initiate a connection to the XMPP server.
@@ -393,11 +392,11 @@ xmpp_ctx_t* xmpp_conn_get_context(xmpp_conn_t * const conn)
  *  @ingroup Connections
  */
 int xmpp_connect_client(xmpp_conn_t * const conn,
-			  const char * const altdomain,
-			  unsigned short altport,
-              xmpp_certfail_handler certfail_cb,
-			  xmpp_conn_handler callback,
-			  void * const userdata)
+                        const char * const altdomain,
+                        unsigned short altport,
+                        xmpp_certfail_handler certfail_cb,
+                        xmpp_conn_handler callback,
+                        void * const userdata)
 {
     char domain[2048];
     int port;
@@ -428,9 +427,10 @@ int xmpp_connect_client(xmpp_conn_t * const conn,
         }
         if (conn->tls_legacy_ssl) {
             /* SSL tunneled connection on 5223 port is legacy and doesn't
-             * have an SRV record. Force port 5223 here.
+             * have an SRV record. Force port 5223 here unless altport is
+             * specified.
              */
-            port = XMPP_PORT_CLIENT_LEGACY_SSL;
+            port = altport ? altport : XMPP_PORT_CLIENT_LEGACY_SSL;
         }
     }
     if (prefdomain != NULL) {
@@ -555,15 +555,15 @@ void conn_disconnect(xmpp_conn_t * const conn)
     xmpp_debug(conn->ctx, "xmpp", "Closing socket.");
     conn->state = XMPP_STATE_DISCONNECTED;
     if (conn->tls) {
-	tls_stop(conn->tls);
-	tls_free(conn->tls);
-	conn->tls = NULL;
+        tls_stop(conn->tls);
+        tls_free(conn->tls);
+        conn->tls = NULL;
     }
     sock_close(conn->sock);
 
     /* fire off connection handler */
     conn->conn_handler(conn, XMPP_CONN_DISCONNECT, conn->error,
-		       conn->stream_error, conn->userdata);
+                       conn->stream_error, conn->userdata);
 }
 
 /* prepares a parser reset.  this is called from handlers. we can't
@@ -582,11 +582,11 @@ void conn_parser_reset(xmpp_conn_t * const conn)
 }
 
 /* timed handler for cleanup if normal disconnect procedure takes too long */
-static int _disconnect_cleanup(xmpp_conn_t * const conn,
-			       void * const userdata)
+static int _disconnect_cleanup(xmpp_conn_t * const conn, 
+                               void * const userdata)
 {
     xmpp_debug(conn->ctx, "xmpp",
-	       "disconnection forced by cleanup timeout");
+               "disconnection forced by cleanup timeout");
 
     conn_disconnect(conn);
 
@@ -605,15 +605,15 @@ static int _disconnect_cleanup(xmpp_conn_t * const conn,
 void xmpp_disconnect(xmpp_conn_t * const conn)
 {
     if (conn->state != XMPP_STATE_CONNECTING &&
-	conn->state != XMPP_STATE_CONNECTED)
-	return;
+        conn->state != XMPP_STATE_CONNECTED)
+        return;
 
     /* close the stream */
     xmpp_send_raw_string(conn, "</stream:stream>");
 
     /* setup timed handler in case disconnect takes too long */
     handler_add_timed(conn, _disconnect_cleanup,
-		      DISCONNECT_TIMEOUT, NULL);
+                      DISCONNECT_TIMEOUT, NULL);
 }
 
 /** Send a raw string to the XMPP server.
@@ -628,7 +628,7 @@ void xmpp_disconnect(xmpp_conn_t * const conn)
  *      arguments to format
  */
 void xmpp_send_raw_string(xmpp_conn_t * const conn,
-			  const char * const fmt, ...)
+                          const char * const fmt, ...)
 {
     va_list ap;
     size_t len;
@@ -640,28 +640,28 @@ void xmpp_send_raw_string(xmpp_conn_t * const conn,
     va_end(ap);
 
     if (len >= 1024) {
-	/* we need more space for this data, so we allocate a big
-	 * enough buffer and print to that */
-	len++; /* account for trailing \0 */
-	bigbuf = xmpp_alloc(conn->ctx, len);
-	if (!bigbuf) {
-	    xmpp_debug(conn->ctx, "xmpp", "Could not allocate memory for send_raw_string");
-	    return;
-	}
-	va_start(ap, fmt);
-	xmpp_vsnprintf(bigbuf, len, fmt, ap);
-	va_end(ap);
+        /* we need more space for this data, so we allocate a big
+         * enough buffer and print to that */
+        len++; /* account for trailing \0 */
+        bigbuf = xmpp_alloc(conn->ctx, len);
+        if (!bigbuf) {
+            xmpp_debug(conn->ctx, "xmpp", "Could not allocate memory for send_raw_string");
+            return;
+        }
+        va_start(ap, fmt);
+        xmpp_vsnprintf(bigbuf, len, fmt, ap);
+        va_end(ap);
 
-	xmpp_debug(conn->ctx, "conn", "SENT: %s", bigbuf);
+        xmpp_debug(conn->ctx, "conn", "SENT: %s", bigbuf);
 
-	/* len - 1 so we don't send trailing \0 */
-	xmpp_send_raw(conn, bigbuf, len - 1);
+        /* len - 1 so we don't send trailing \0 */
+        xmpp_send_raw(conn, bigbuf, len - 1);
 
-	xmpp_free(conn->ctx, bigbuf);
+        xmpp_free(conn->ctx, bigbuf);
     } else {
-	xmpp_debug(conn->ctx, "conn", "SENT: %s", buf);
+        xmpp_debug(conn->ctx, "conn", "SENT: %s", buf);
 
-	xmpp_send_raw(conn, buf, len);
+        xmpp_send_raw(conn, buf, len);
     }
 }
 
@@ -676,7 +676,7 @@ void xmpp_send_raw_string(xmpp_conn_t * const conn,
  *  @param len the length of the data in the buffer
  */
 void xmpp_send_raw(xmpp_conn_t * const conn,
-		   const char * const data, const size_t len)
+                   const char * const data, const size_t len)
 {
     xmpp_send_queue_t *item;
 
@@ -688,8 +688,8 @@ void xmpp_send_raw(xmpp_conn_t * const conn,
 
     item->data = xmpp_alloc(conn->ctx, len);
     if (!item->data) {
-	xmpp_free(conn->ctx, item);
-	return;
+        xmpp_free(conn->ctx, item);
+        return;
     }
     memcpy(item->data, data, len);
     item->len = len;
@@ -698,13 +698,13 @@ void xmpp_send_raw(xmpp_conn_t * const conn,
 
     /* add item to the send queue */
     if (!conn->send_queue_tail) {
-	/* first item, set head and tail */
-	conn->send_queue_head = item;
-	conn->send_queue_tail = item;
+        /* first item, set head and tail */
+        conn->send_queue_head = item;
+        conn->send_queue_tail = item;
     } else {
-	/* add to the tail */
-	conn->send_queue_tail->next = item;
-	conn->send_queue_tail = item;
+        /* add to the tail */
+        conn->send_queue_tail->next = item;
+        conn->send_queue_tail = item;
     }
     conn->send_queue_len++;
 }
@@ -719,18 +719,18 @@ void xmpp_send_raw(xmpp_conn_t * const conn,
  *  @ingroup Connections
  */
 void xmpp_send(xmpp_conn_t * const conn,
-	       xmpp_stanza_t * const stanza)
+               xmpp_stanza_t * const stanza)
 {
     char *buf;
     size_t len;
     int ret;
 
     if (conn->state == XMPP_STATE_CONNECTED) {
-	if ((ret = xmpp_stanza_to_text(stanza, &buf, &len)) == 0) {
-	    xmpp_send_raw(conn, buf, len);
-	    xmpp_debug(conn->ctx, "conn", "SENT: %s", buf);
-	    xmpp_free(conn->ctx, buf);
-	}
+        if ((ret = xmpp_stanza_to_text(stanza, &buf, &len)) == 0) {
+            xmpp_send_raw(conn, buf, len);
+            xmpp_debug(conn->ctx, "conn", "SENT: %s", buf);
+            xmpp_free(conn->ctx, buf);
+        }
     }
 }
 
@@ -742,17 +742,18 @@ void xmpp_send(xmpp_conn_t * const conn,
  */
 void conn_open_stream(xmpp_conn_t * const conn)
 {
-    xmpp_send_raw_string(conn,
-			 "<?xml version=\"1.0\"?>"			\
-			 "<stream:stream to=\"%s\" "			\
-			 "xml:lang=\"%s\" "				\
-			 "version=\"1.0\" "				\
-			 "xmlns=\"%s\" "				\
-			 "xmlns:stream=\"%s\">",
-			 conn->domain,
-			 conn->lang,
-			 conn->type == XMPP_CLIENT ? XMPP_NS_CLIENT : XMPP_NS_COMPONENT,
-			 XMPP_NS_STREAMS);
+    xmpp_send_raw_string(conn, 
+                         "<?xml version=\"1.0\"?>"                     \
+                         "<stream:stream to=\"%s\" "                   \
+                         "xml:lang=\"%s\" "                            \
+                         "version=\"1.0\" "                            \
+                         "xmlns=\"%s\" "                               \
+                         "xmlns:stream=\"%s\">",
+                         conn->domain,
+                         conn->lang,
+                         conn->type == XMPP_CLIENT ? XMPP_NS_CLIENT :
+                                                     XMPP_NS_COMPONENT,
+                         XMPP_NS_STREAMS);
 }
 
 int conn_tls_start(xmpp_conn_t * const conn)
