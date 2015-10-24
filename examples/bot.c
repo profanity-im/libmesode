@@ -88,11 +88,16 @@ int message_handler(xmpp_conn_t * const conn, xmpp_stanza_t * const stanza, void
 	strcpy(replytext, intext);
 	strcat(replytext, " to you too!");
 
+	xmpp_free(ctx, intext);
+	
 	text = xmpp_stanza_new(ctx);
 	xmpp_stanza_set_text(text, replytext);
 	xmpp_stanza_add_child(body, text);
 	xmpp_stanza_add_child(reply, body);
 
+	xmpp_stanza_release(body);
+	xmpp_stanza_release(text);
+	
 	xmpp_send(conn, reply);
 	xmpp_stanza_release(reply);
 	free(replytext);

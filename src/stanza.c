@@ -579,7 +579,10 @@ int xmpp_stanza_set_attribute(xmpp_stanza_t * const stanza,
     }
 
     val = xmpp_strdup(stanza->ctx, value);
-    if (!val) return XMPP_EMEM;
+    if (!val) {
+        hash_release(stanza->attributes);
+        return XMPP_EMEM;
+    }
 
     hash_add(stanza->attributes, key, val);
 
@@ -658,7 +661,7 @@ int xmpp_stanza_set_text(xmpp_stanza_t *stanza,
     if (stanza->data) xmpp_free(stanza->ctx, stanza->data);
     stanza->data = xmpp_strdup(stanza->ctx, text);
 
-    return XMPP_EOK;
+    return stanza->data == NULL ? XMPP_EMEM : XMPP_EOK;
 }
 
 /** Set the text data for a text stanza.
@@ -705,13 +708,7 @@ int xmpp_stanza_set_text_with_size(xmpp_stanza_t *stanza,
  */
 char *xmpp_stanza_get_id(xmpp_stanza_t * const stanza)
 {
-    if (stanza->type != XMPP_STANZA_TAG)
-	return NULL;
-
-    if (!stanza->attributes)
-	return NULL;
-
-    return (char *)hash_get(stanza->attributes, "id");
+    return xmpp_stanza_get_attribute(stanza, "id");
 }
 
 /** Get the namespace attribute of the stanza object.
@@ -726,13 +723,7 @@ char *xmpp_stanza_get_id(xmpp_stanza_t * const stanza)
  */
 char *xmpp_stanza_get_ns(xmpp_stanza_t * const stanza)
 {
-    if (stanza->type != XMPP_STANZA_TAG)
-	return NULL;
-
-    if (!stanza->attributes)
-	return NULL;
-
-    return (char *)hash_get(stanza->attributes, "xmlns");
+    return xmpp_stanza_get_attribute(stanza, "xmlns");
 }
 
 /** Get the 'type' attribute of the stanza object.
@@ -747,13 +738,7 @@ char *xmpp_stanza_get_ns(xmpp_stanza_t * const stanza)
  */
 char *xmpp_stanza_get_type(xmpp_stanza_t * const stanza)
 {
-    if (stanza->type != XMPP_STANZA_TAG)
-	return NULL;
-
-    if (!stanza->attributes)
-	return NULL;
-
-    return (char *)hash_get(stanza->attributes, "type");
+    return xmpp_stanza_get_attribute(stanza, "type");
 }
 
 /** Get the 'to' attribute of the stanza object.
@@ -768,13 +753,7 @@ char *xmpp_stanza_get_type(xmpp_stanza_t * const stanza)
  */
 char *xmpp_stanza_get_to(xmpp_stanza_t * const stanza)
 {
-    if (stanza->type != XMPP_STANZA_TAG)
-	return NULL;
-
-    if (!stanza->attributes)
-	return NULL;
-
-    return (char *)hash_get(stanza->attributes, "to");
+    return xmpp_stanza_get_attribute(stanza, "to");
 }
 
 /** Get the 'from' attribute of the stanza object.
@@ -789,13 +768,7 @@ char *xmpp_stanza_get_to(xmpp_stanza_t * const stanza)
  */
 char *xmpp_stanza_get_from(xmpp_stanza_t * const stanza)
 {
-    if (stanza->type != XMPP_STANZA_TAG)
-	return NULL;
-
-    if (!stanza->attributes)
-	return NULL;
-
-    return (char *)hash_get(stanza->attributes, "from");
+    return xmpp_stanza_get_attribute(stanza, "from");
 }
 
 /** Get the first child of stanza with name.
