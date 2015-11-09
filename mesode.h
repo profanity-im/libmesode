@@ -227,6 +227,7 @@ xmpp_ctx_t* xmpp_conn_get_context(xmpp_conn_t * const conn);
 void xmpp_conn_disable_tls(xmpp_conn_t * const conn);
 void xmpp_conn_tlscert_path(xmpp_conn_t * const conn, char *path);
 int xmpp_conn_is_secured(xmpp_conn_t * const conn);
+char *xmpp_conn_tls_peer_cert(xmpp_conn_t * const conn);
 
 int xmpp_connect_client(xmpp_conn_t * const conn,
 			  const char * const altdomain,
@@ -356,7 +357,7 @@ char *xmpp_stanza_get_type(xmpp_stanza_t * const stanza);
 char *xmpp_stanza_get_id(xmpp_stanza_t * const stanza);
 char *xmpp_stanza_get_to(xmpp_stanza_t * const stanza);
 char *xmpp_stanza_get_from(xmpp_stanza_t * const stanza);
-int xmpp_stanza_set_id(xmpp_stanza_t * const stanza, 
+int xmpp_stanza_set_id(xmpp_stanza_t * const stanza,
 		       const char * const id);
 int xmpp_stanza_set_type(xmpp_stanza_t * const stanza,
 			 const char * const type);

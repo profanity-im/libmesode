@@ -155,6 +155,26 @@ verify_callback(int preverify_ok, X509_STORE_CTX *x509_ctx)
     }
 }
 
+char* tls_peer_cert(xmpp_conn_t *conn)
+{
+    if (conn && conn->tls && conn->tls->ssl) {
+        X509 *cert = SSL_get_peer_certificate(conn->tls->ssl);
+        unsigned char buf[20];
+        const EVP_MD *digest = EVP_sha1();
+        unsigned len;
+        int rc = X509_digest(cert, digest, (unsigned char*) buf, &len);
+        char strbuf[2*20+1];
+        if (rc != 0 && len == 20) {
+            hex_encode(buf, strbuf, 20);
+            return strbuf;
+        } else {
+            return NULL;
+        }
+    } else {
+        return NULL;
+    }
+}
+
 tls_t *tls_new(xmpp_conn_t *conn)
 {
     xmppconn = conn;

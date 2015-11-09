@@ -27,6 +27,8 @@ void tls_shutdown(void);
 tls_t *tls_new(xmpp_conn_t *conn);
 void tls_free(tls_t *tls);
 
+char* tls_peer_cert(xmpp_conn_t *conn);
+
 int tls_set_credentials(tls_t *tls, const char *cafilename);
 
 int tls_start(tls_t *tls);

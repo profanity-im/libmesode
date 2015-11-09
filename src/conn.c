@@ -25,6 +25,7 @@
 #include "common.h"
 #include "util.h"
 #include "parser.h"
+#include "tls.h"
 
 #ifndef DEFAULT_SEND_QUEUE_MAX
 /** @def DEFAULT_SEND_QUEUE_MAX
@@ -868,6 +869,11 @@ void xmpp_conn_tlscert_path(xmpp_conn_t * const conn, char *path)
 int xmpp_conn_is_secured(xmpp_conn_t * const conn)
 {
     return conn->secured && !conn->tls_failed && conn->tls != NULL ? 1 : 0;
+}
+
+char* xmpp_conn_tls_peer_cert(xmpp_conn_t * const conn)
+{
+    return tls_peer_cert(conn);
 }
 
 static void _log_open_tag(xmpp_conn_t *conn, char **attrs)
