@@ -74,7 +74,7 @@ hex_encode(unsigned char* readbuf, void *writebuf, size_t len)
     }
 }
 
-static xmpp_ctx_t *xmppctx;
+static xmpp_conn_t *xmppconn;
 static int cert_handled;
 static int last_cb_res;
 
@@ -84,8 +84,8 @@ print_certificate(X509* cert) {
     char issuer[1024+1];
     X509_NAME_oneline(X509_get_subject_name(cert), subj, 1024);
     X509_NAME_oneline(X509_get_issuer_name(cert), issuer, 1024);
-    xmpp_debug(xmppctx, "TLS", "SUBJECT : %s", subj);
-    xmpp_debug(xmppctx, "TLS", "ISSUER  : %s", issuer);
+    xmpp_debug(xmppconn->ctx, "TLS", "SUBJECT : %s", subj);
+    xmpp_debug(xmppconn->ctx, "TLS", "ISSUER  : %s", issuer);
 }
 
 static int
@@ -95,12 +95,12 @@ verify_callback(int preverify_ok, X509_STORE_CTX *x509_ctx)
     int slen = sk_X509_num(sk);
     unsigned i;
     X509 *certsk;
-    xmpp_debug(xmppctx, "TLS", "STACK");
+    xmpp_debug(xmppconn->ctx, "TLS", "STACK");
     for(i=0; i<slen; i++) {
         certsk = sk_X509_value(sk, i);
         print_certificate(certsk);
     }
-    xmpp_debug(xmppctx, "TLS", "ENDSTACK");
+    xmpp_debug(xmppconn->ctx, "TLS", "ENDSTACK");
 
     if (preverify_ok) {
         return 1;
@@ -112,7 +112,7 @@ verify_callback(int preverify_ok, X509_STORE_CTX *x509_ctx)
     } else {
         int err = X509_STORE_CTX_get_error(x509_ctx);
         const char *errstr = X509_verify_cert_error_string(err);
-        xmpp_debug(xmppctx, "TLS", "ERROR: %s", errstr);
+        xmpp_debug(xmppconn->ctx, "TLS", "ERROR: %s", errstr);
 
         X509 *user_cert;
         user_cert = sk_X509_value(sk, 0);
@@ -136,7 +136,7 @@ verify_callback(int preverify_ok, X509_STORE_CTX *x509_ctx)
             hex_encode(buf, strbuf, 20);
         }
 
-        int cb_res = xmppctx->connlist->conn->certfail_handler(
+        int cb_res = xmppconn->certfail_handler(
             usersubjectname,
             strbuf,
             user_not_before_str,
@@ -155,30 +155,30 @@ verify_callback(int preverify_ok, X509_STORE_CTX *x509_ctx)
     }
 }
 
-tls_t *tls_new(xmpp_ctx_t *ctx, sock_t sock)
+tls_t *tls_new(xmpp_conn_t *conn)
 {
-    xmppctx = ctx;
+    xmppconn = conn;
     cert_handled = 0;
     last_cb_res = 0;
-    tls_t *tls = xmpp_alloc(ctx, sizeof(*tls));
+    tls_t *tls = xmpp_alloc(conn->ctx, sizeof(*tls));
 
     if (tls) {
         int ret;
         memset(tls, 0, sizeof(*tls));
 
-        tls->ctx = ctx;
-        tls->sock = sock;
+        tls->ctx = conn->ctx;
+        tls->sock = conn->sock;
         tls->ssl_ctx = SSL_CTX_new(SSLv23_client_method());
 
         SSL_CTX_set_client_cert_cb(tls->ssl_ctx, NULL);
         SSL_CTX_set_mode (tls->ssl_ctx, SSL_MODE_ENABLE_PARTIAL_WRITE);
         SSL_CTX_set_verify (tls->ssl_ctx, SSL_VERIFY_PEER, verify_callback);
-        if (xmppctx->connlist->conn->tls_cert_path) {
-            SSL_CTX_load_verify_locations(tls->ssl_ctx, NULL, xmppctx->connlist->conn->tls_cert_path);
+        if (conn->tls_cert_path) {
+            SSL_CTX_load_verify_locations(tls->ssl_ctx, NULL, conn->tls_cert_path);
         }
         tls->ssl = SSL_new(tls->ssl_ctx);
 
-        ret = SSL_set_fd(tls->ssl, sock);
+        ret = SSL_set_fd(tls->ssl, conn->sock);
         if (ret <= 0) {
             tls->lasterror = SSL_get_error(tls->ssl, ret);
             tls_error(tls);
@@ -223,7 +223,7 @@ int tls_start(tls_t *tls)
 
             FD_ZERO(&fds);
             FD_SET(tls->sock, &fds);
-    
+
             if (error == SSL_ERROR_WANT_READ)
                 select(tls->sock + 1, &fds, NULL, NULL, &tv);
             else

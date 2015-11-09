@@ -586,7 +586,7 @@ void conn_parser_reset(xmpp_conn_t * const conn)
 }
 
 /* timed handler for cleanup if normal disconnect procedure takes too long */
-static int _disconnect_cleanup(xmpp_conn_t * const conn, 
+static int _disconnect_cleanup(xmpp_conn_t * const conn,
                                void * const userdata)
 {
     xmpp_debug(conn->ctx, "xmpp",
@@ -746,7 +746,7 @@ void xmpp_send(xmpp_conn_t * const conn,
  */
 void conn_open_stream(xmpp_conn_t * const conn)
 {
-    xmpp_send_raw_string(conn, 
+    xmpp_send_raw_string(conn,
                          "<?xml version=\"1.0\"?>"                     \
                          "<stream:stream to=\"%s\" "                   \
                          "xml:lang=\"%s\" "                            \
@@ -768,7 +768,7 @@ int conn_tls_start(xmpp_conn_t * const conn)
         conn->tls = NULL;
         rc = -ENOSYS;
     } else {
-        conn->tls = tls_new(conn->ctx, conn->sock);
+        conn->tls = tls_new(conn);
         rc = conn->tls == NULL ? -ENOMEM : 0;
     }
 

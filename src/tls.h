@@ -1,7 +1,7 @@
 /* tls.h
 ** strophe XMPP client library -- TLS abstraction header
 **
-** Copyright (C) 2005-2009 Collecta, Inc. 
+** Copyright (C) 2005-2009 Collecta, Inc.
 **
 **  This software is provided AS-IS with no warranty, either express
 **  or implied.
@@ -24,7 +24,7 @@ typedef struct _tls tls_t;
 void tls_initialize(void);
 void tls_shutdown(void);
 
-tls_t *tls_new(xmpp_ctx_t *ctx, sock_t sock);
+tls_t *tls_new(xmpp_conn_t *conn);
 void tls_free(tls_t *tls);
 
 int tls_set_credentials(tls_t *tls, const char *cafilename);
