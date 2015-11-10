@@ -64,8 +64,11 @@ convert_ASN1TIME(ASN1_TIME *ansi_time, char* buf, size_t len)
     return 1;
 }
 
-void
-hex_encode(unsigned char* readbuf, void *writebuf, size_t len)
+static xmpp_conn_t *_xmppconn;
+static int _cert_handled;
+static int _last_cb_res;
+
+static void _hex_encode(unsigned char* readbuf, void *writebuf, size_t len)
 {
     size_t i;
     for(i=0; i < len; i++) {
@@ -74,18 +77,51 @@ hex_encode(unsigned char* readbuf, void *writebuf, size_t len)
     }
 }
 
-static xmpp_conn_t *xmppconn;
-static int cert_handled;
-static int last_cb_res;
-
-static void
-print_certificate(X509* cert) {
+static void _print_certificate(X509* cert) {
     char subj[1024+1];
     char issuer[1024+1];
     X509_NAME_oneline(X509_get_subject_name(cert), subj, 1024);
     X509_NAME_oneline(X509_get_issuer_name(cert), issuer, 1024);
-    xmpp_debug(xmppconn->ctx, "TLS", "SUBJECT : %s", subj);
-    xmpp_debug(xmppconn->ctx, "TLS", "ISSUER  : %s", issuer);
+    xmpp_debug(_xmppconn->ctx, "TLS", "SUBJECT : %s", subj);
+    xmpp_debug(_xmppconn->ctx, "TLS", "ISSUER  : %s", issuer);
+}
+
+static struct _tlscert_t *_x509_to_tlscert(xmpp_ctx_t *ctx, X509 *cert)
+{
+    if (!cert) {
+        return NULL;
+    }
+
+    struct _tlscert_t *tlscert = xmpp_alloc(ctx, sizeof(*tlscert));
+
+    X509_NAME *usersubject = X509_get_subject_name(cert);
+    char *usersubjectname = X509_NAME_oneline(usersubject, NULL, 0);
+    tlscert->subjectname = xmpp_strdup(ctx, usersubjectname);
+    OPENSSL_free(usersubjectname);
+
+    ASN1_TIME *user_not_before = X509_get_notBefore(cert);
+    char user_not_before_str[128];
+    int user_not_before_res = convert_ASN1TIME(user_not_before, user_not_before_str, 128);
+    tlscert->notbefore = xmpp_strdup(ctx, user_not_before_str);
+
+    ASN1_TIME *user_not_after = X509_get_notAfter(cert);
+    char user_not_after_str[128];
+    int user_not_after_res = convert_ASN1TIME(user_not_after, user_not_after_str, 128);
+    tlscert->notafter = xmpp_strdup(ctx, user_not_after_str);
+
+    unsigned char buf[20];
+    const EVP_MD *digest = EVP_sha1();
+    unsigned len;
+    int rc = X509_digest(cert, digest, (unsigned char*) buf, &len);
+    char strbuf[2*20+1];
+    if (rc != 0 && len == 20) {
+        _hex_encode(buf, strbuf, 20);
+        tlscert->fp = xmpp_strdup(ctx, strbuf);
+    } else {
+        tlscert->fp = NULL;
+    }
+
+    return tlscert;
 }
 
 static int
@@ -95,57 +131,32 @@ verify_callback(int preverify_ok, X509_STORE_CTX *x509_ctx)
     int slen = sk_X509_num(sk);
     unsigned i;
     X509 *certsk;
-    xmpp_debug(xmppconn->ctx, "TLS", "STACK");
+    xmpp_debug(_xmppconn->ctx, "TLS", "STACK");
     for(i=0; i<slen; i++) {
         certsk = sk_X509_value(sk, i);
-        print_certificate(certsk);
+        _print_certificate(certsk);
     }
-    xmpp_debug(xmppconn->ctx, "TLS", "ENDSTACK");
+    xmpp_debug(_xmppconn->ctx, "TLS", "ENDSTACK");
 
     if (preverify_ok) {
         return 1;
-    } else if (cert_handled) {
-        if (last_cb_res == 0) {
+    } else if (_cert_handled) {
+        if (_last_cb_res == 0) {
             X509_STORE_CTX_set_error(x509_ctx, X509_V_ERR_APPLICATION_VERIFICATION);
         }
-        return last_cb_res;
+        return _last_cb_res;
     } else {
         int err = X509_STORE_CTX_get_error(x509_ctx);
         const char *errstr = X509_verify_cert_error_string(err);
-        xmpp_debug(xmppconn->ctx, "TLS", "ERROR: %s", errstr);
+        xmpp_debug(_xmppconn->ctx, "TLS", "ERROR: %s", errstr);
 
-        X509 *user_cert;
-        user_cert = sk_X509_value(sk, 0);
-        X509_NAME *usersubject = X509_get_subject_name(user_cert);
-        char *usersubjectname = X509_NAME_oneline(usersubject, NULL, 0);
+        X509 *user_cert = sk_X509_value(sk, 0);
+        struct _tlscert_t *tlscert = _x509_to_tlscert(_xmppconn->ctx, user_cert);
+        int cb_res = _xmppconn->certfail_handler(tlscert, errstr);
+        xmpp_conn_free_tlscert(_xmppconn->ctx, tlscert);
 
-        ASN1_TIME *user_not_before = X509_get_notBefore(user_cert);
-        char user_not_before_str[128];
-        int user_not_before_res = convert_ASN1TIME(user_not_before, user_not_before_str, 128);
-
-        ASN1_TIME *user_not_after = X509_get_notAfter(user_cert);
-        char user_not_after_str[128];
-        int user_not_after_res = convert_ASN1TIME(user_not_after, user_not_after_str, 128);
-
-        unsigned char buf[20];
-        const EVP_MD *digest = EVP_sha1();
-        unsigned len;
-        int rc = X509_digest(user_cert, digest, (unsigned char*) buf, &len);
-        char strbuf[2*20+1];
-        if (rc != 0 && len == 20) {
-            hex_encode(buf, strbuf, 20);
-        }
-
-        int cb_res = xmppconn->certfail_handler(
-            usersubjectname,
-            strbuf,
-            user_not_before_str,
-            user_not_after_str,
-            errstr);
-        OPENSSL_free(usersubjectname);
-
-        cert_handled = 1;
-        last_cb_res = cb_res;
+        _cert_handled = 1;
+        _last_cb_res = cb_res;
 
         if (cb_res == 0) {
             X509_STORE_CTX_set_error(x509_ctx, X509_V_ERR_APPLICATION_VERIFICATION);
@@ -155,21 +166,12 @@ verify_callback(int preverify_ok, X509_STORE_CTX *x509_ctx)
     }
 }
 
-char* tls_peer_cert(xmpp_conn_t *conn)
+struct _tlscert_t *tls_peer_cert(xmpp_conn_t *conn)
 {
     if (conn && conn->tls && conn->tls->ssl) {
         X509 *cert = SSL_get_peer_certificate(conn->tls->ssl);
-        unsigned char buf[20];
-        const EVP_MD *digest = EVP_sha1();
-        unsigned len;
-        int rc = X509_digest(cert, digest, (unsigned char*) buf, &len);
-        char strbuf[2*20+1];
-        if (rc != 0 && len == 20) {
-            hex_encode(buf, strbuf, 20);
-            return strbuf;
-        } else {
-            return NULL;
-        }
+        struct _tlscert_t *tlscert = _x509_to_tlscert(conn->ctx, cert);
+        return tlscert;
     } else {
         return NULL;
     }
@@ -177,9 +179,9 @@ char* tls_peer_cert(xmpp_conn_t *conn)
 
 tls_t *tls_new(xmpp_conn_t *conn)
 {
-    xmppconn = conn;
-    cert_handled = 0;
-    last_cb_res = 0;
+    _xmppconn = conn;
+    _cert_handled = 0;
+    _last_cb_res = 0;
     tls_t *tls = xmpp_alloc(conn->ctx, sizeof(*tls));
 
     if (tls) {

@@ -871,9 +871,38 @@ int xmpp_conn_is_secured(xmpp_conn_t * const conn)
     return conn->secured && !conn->tls_failed && conn->tls != NULL ? 1 : 0;
 }
 
-char* xmpp_conn_tls_peer_cert(xmpp_conn_t * const conn)
+xmpp_tlscert_t *xmpp_conn_tls_peer_cert(xmpp_conn_t * const conn)
 {
     return tls_peer_cert(conn);
+}
+
+char *xmpp_conn_tlscert_subjectname(struct _tlscert_t *cert)
+{
+    return cert->subjectname;
+}
+
+char *xmpp_conn_tlscert_fp(struct _tlscert_t *cert)
+{
+    return cert->fp;
+}
+
+char *xmpp_conn_tlscert_notbefore(struct _tlscert_t *cert)
+{
+    return cert->notbefore;
+}
+
+char *xmpp_conn_tlscert_notafter(struct _tlscert_t *cert)
+{
+    return cert->notafter;
+}
+
+void xmpp_conn_free_tlscert(xmpp_ctx_t *ctx, struct _tlscert_t *cert)
+{
+    xmpp_free(ctx, cert->fp);
+    xmpp_free(ctx, cert->subjectname);
+    xmpp_free(ctx, cert->notbefore);
+    xmpp_free(ctx, cert->notafter);
+    xmpp_free(ctx, cert);
 }
 
 static void _log_open_tag(xmpp_conn_t *conn, char **attrs)

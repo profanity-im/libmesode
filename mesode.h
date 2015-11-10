@@ -114,6 +114,8 @@ typedef struct _xmpp_log_t xmpp_log_t;
 /* opaque run time context containing the above hooks */
 typedef struct _xmpp_ctx_t xmpp_ctx_t;
 
+typedef struct _tlscert_t xmpp_tlscert_t;
+
 xmpp_ctx_t *xmpp_ctx_new(const xmpp_mem_t * const mem,
 			     const xmpp_log_t * const log);
 void xmpp_ctx_free(xmpp_ctx_t * const ctx);
@@ -208,9 +210,7 @@ typedef void (*xmpp_conn_handler)(xmpp_conn_t * const conn,
 				  xmpp_stream_error_t * const stream_error,
 				  void * const userdata);
 
-typedef int (*xmpp_certfail_handler)(const char * const certname,
-    const char * const certfp, char * const notbefore, const char * const notafter,
-    const char * const errormsg);
+typedef int (*xmpp_certfail_handler)(xmpp_tlscert_t *cert, const char * const errormsg);
 
 xmpp_conn_t *xmpp_conn_new(xmpp_ctx_t * const ctx);
 xmpp_conn_t * xmpp_conn_clone(xmpp_conn_t * const conn);
@@ -227,7 +227,12 @@ xmpp_ctx_t* xmpp_conn_get_context(xmpp_conn_t * const conn);
 void xmpp_conn_disable_tls(xmpp_conn_t * const conn);
 void xmpp_conn_tlscert_path(xmpp_conn_t * const conn, char *path);
 int xmpp_conn_is_secured(xmpp_conn_t * const conn);
-char *xmpp_conn_tls_peer_cert(xmpp_conn_t * const conn);
+xmpp_tlscert_t *xmpp_conn_tls_peer_cert(xmpp_conn_t * const conn);
+char *xmpp_conn_tlscert_subjectname(xmpp_tlscert_t *cert);
+char *xmpp_conn_tlscert_fp(xmpp_tlscert_t *cert);
+char *xmpp_conn_tlscert_notbefore(xmpp_tlscert_t *cert);
+char *xmpp_conn_tlscert_notafter(xmpp_tlscert_t *cert);
+void xmpp_conn_free_tlscert(xmpp_ctx_t *ctx, xmpp_tlscert_t *cert);
 
 int xmpp_connect_client(xmpp_conn_t * const conn,
 			  const char * const altdomain,

@@ -21,13 +21,20 @@
 
 typedef struct _tls tls_t;
 
+struct _tlscert_t {
+    char *subjectname;
+    char *fp;
+    char *notbefore;
+    char *notafter;
+};
+
 void tls_initialize(void);
 void tls_shutdown(void);
 
 tls_t *tls_new(xmpp_conn_t *conn);
 void tls_free(tls_t *tls);
 
-char* tls_peer_cert(xmpp_conn_t *conn);
+xmpp_tlscert_t* tls_peer_cert(xmpp_conn_t *conn);
 
 int tls_set_credentials(tls_t *tls, const char *cafilename);
 

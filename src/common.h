@@ -52,7 +52,6 @@ struct _xmpp_ctx_t {
     xmpp_connlist_t *connlist;
 };
 
-
 /* convenience functions for accessing the context */
 void *xmpp_alloc(const xmpp_ctx_t * const ctx, const size_t size);
 void *xmpp_realloc(const xmpp_ctx_t * const ctx, void *p,

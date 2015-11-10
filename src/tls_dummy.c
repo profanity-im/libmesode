@@ -1,7 +1,7 @@
 /* tls_dummy.c
 ** strophe XMPP client library -- TLS abstraction dummy impl.
 **
-** Copyright (C) 2005-2009 Collecta, Inc. 
+** Copyright (C) 2005-2009 Collecta, Inc.
 **
 **  This software is provided AS-IS with no warranty, either express
 **  or implied.
@@ -47,6 +47,11 @@ void tls_free(tls_t *tls)
 int tls_set_credentials(tls_t *tls, const char *cafilename)
 {
     return -1;
+}
+
+struct _tlscert_t *tls_peer_cert(xmpp_conn_t *conn)
+{
+    return NULL;
 }
 
 int tls_start(tls_t *tls)
