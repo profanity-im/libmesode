@@ -876,14 +876,29 @@ xmpp_tlscert_t *xmpp_conn_tls_peer_cert(xmpp_conn_t * const conn)
     return tls_peer_cert(conn);
 }
 
+int xmpp_conn_tlscert_version(struct _tlscert_t *cert)
+{
+    return cert->version;
+}
+
+char *xmpp_conn_tlscert_serialnumber(struct _tlscert_t *cert)
+{
+    return cert->serialnumber;
+}
+
 char *xmpp_conn_tlscert_subjectname(struct _tlscert_t *cert)
 {
     return cert->subjectname;
 }
 
-char *xmpp_conn_tlscert_fp(struct _tlscert_t *cert)
+char *xmpp_conn_tlscert_issuername(struct _tlscert_t *cert)
 {
-    return cert->fp;
+    return cert->issuername;
+}
+
+char *xmpp_conn_tlscert_fingerprint(struct _tlscert_t *cert)
+{
+    return cert->fingerprint;
 }
 
 char *xmpp_conn_tlscert_notbefore(struct _tlscert_t *cert)
@@ -896,12 +911,26 @@ char *xmpp_conn_tlscert_notafter(struct _tlscert_t *cert)
     return cert->notafter;
 }
 
+char *xmpp_conn_tlscert_signature_algorithm(struct _tlscert_t *cert)
+{
+    return cert->sigalg;
+}
+
+char *xmpp_conn_tlscert_key_algorithm(struct _tlscert_t *cert)
+{
+    return cert->keyalg;
+}
+
 void xmpp_conn_free_tlscert(xmpp_ctx_t *ctx, struct _tlscert_t *cert)
 {
-    xmpp_free(ctx, cert->fp);
+    xmpp_free(ctx, cert->fingerprint);
+    xmpp_free(ctx, cert->serialnumber);
     xmpp_free(ctx, cert->subjectname);
+    xmpp_free(ctx, cert->issuername);
     xmpp_free(ctx, cert->notbefore);
     xmpp_free(ctx, cert->notafter);
+    xmpp_free(ctx, cert->keyalg);
+    xmpp_free(ctx, cert->sigalg);
     xmpp_free(ctx, cert);
 }
 

@@ -227,11 +227,17 @@ xmpp_ctx_t* xmpp_conn_get_context(xmpp_conn_t * const conn);
 void xmpp_conn_disable_tls(xmpp_conn_t * const conn);
 void xmpp_conn_tlscert_path(xmpp_conn_t * const conn, char *path);
 int xmpp_conn_is_secured(xmpp_conn_t * const conn);
+
 xmpp_tlscert_t *xmpp_conn_tls_peer_cert(xmpp_conn_t * const conn);
+int xmpp_conn_tlscert_version(xmpp_tlscert_t *cert);
+char *xmpp_conn_tlscert_serialnumber(xmpp_tlscert_t *cert);
 char *xmpp_conn_tlscert_subjectname(xmpp_tlscert_t *cert);
-char *xmpp_conn_tlscert_fp(xmpp_tlscert_t *cert);
+char *xmpp_conn_tlscert_issuername(xmpp_tlscert_t *cert);
+char *xmpp_conn_tlscert_fingerprint(xmpp_tlscert_t *cert);
 char *xmpp_conn_tlscert_notbefore(xmpp_tlscert_t *cert);
 char *xmpp_conn_tlscert_notafter(xmpp_tlscert_t *cert);
+char *xmpp_conn_tlscert_signature_algorithm(xmpp_tlscert_t *cert);
+char *xmpp_conn_tlscert_key_algorithm(xmpp_tlscert_t *cert);
 void xmpp_conn_free_tlscert(xmpp_ctx_t *ctx, xmpp_tlscert_t *cert);
 
 int xmpp_connect_client(xmpp_conn_t * const conn,

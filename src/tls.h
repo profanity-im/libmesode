@@ -22,10 +22,15 @@
 typedef struct _tls tls_t;
 
 struct _tlscert_t {
+    int version;
+    char *serialnumber;
     char *subjectname;
-    char *fp;
+    char *issuername;
     char *notbefore;
     char *notafter;
+    char *keyalg;
+    char *sigalg;
+    char *fingerprint;
 };
 
 void tls_initialize(void);

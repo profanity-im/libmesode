@@ -78,11 +78,11 @@ static void _hex_encode(unsigned char* readbuf, void *writebuf, size_t len)
 }
 
 static void _print_certificate(X509* cert) {
-    char subj[1024+1];
+    char subject[1024+1];
     char issuer[1024+1];
-    X509_NAME_oneline(X509_get_subject_name(cert), subj, 1024);
+    X509_NAME_oneline(X509_get_subject_name(cert), subject, 1024);
     X509_NAME_oneline(X509_get_issuer_name(cert), issuer, 1024);
-    xmpp_debug(_xmppconn->ctx, "TLS", "SUBJECT : %s", subj);
+    xmpp_debug(_xmppconn->ctx, "TLS", "SUBJECT : %s", subject);
     xmpp_debug(_xmppconn->ctx, "TLS", "ISSUER  : %s", issuer);
 }
 
@@ -94,31 +94,81 @@ static struct _tlscert_t *_x509_to_tlscert(xmpp_ctx_t *ctx, X509 *cert)
 
     struct _tlscert_t *tlscert = xmpp_alloc(ctx, sizeof(*tlscert));
 
-    X509_NAME *usersubject = X509_get_subject_name(cert);
-    char *usersubjectname = X509_NAME_oneline(usersubject, NULL, 0);
-    tlscert->subjectname = xmpp_strdup(ctx, usersubjectname);
-    OPENSSL_free(usersubjectname);
+    tlscert->subjectname = NULL;
+    X509_NAME *subject = X509_get_subject_name(cert);
+    char *subjectline = X509_NAME_oneline(subject, NULL, 0);
+    if (subjectline) {
+        tlscert->subjectname = xmpp_strdup(ctx, subjectline);
+        OPENSSL_free(subjectline);
+    }
 
-    ASN1_TIME *user_not_before = X509_get_notBefore(cert);
-    char user_not_before_str[128];
-    int user_not_before_res = convert_ASN1TIME(user_not_before, user_not_before_str, 128);
-    tlscert->notbefore = xmpp_strdup(ctx, user_not_before_str);
+    tlscert->issuername = NULL;
+    X509_NAME *issuer = X509_get_issuer_name(cert);
+    char *issuerline = X509_NAME_oneline(issuer, NULL, 0);
+    if (issuerline) {
+        tlscert->issuername = xmpp_strdup(ctx, issuerline);
+        OPENSSL_free(issuerline);
+    }
 
-    ASN1_TIME *user_not_after = X509_get_notAfter(cert);
-    char user_not_after_str[128];
-    int user_not_after_res = convert_ASN1TIME(user_not_after, user_not_after_str, 128);
-    tlscert->notafter = xmpp_strdup(ctx, user_not_after_str);
+    tlscert->notbefore = NULL;
+    ASN1_TIME *notbefore = X509_get_notBefore(cert);
+    char notbefore_str[128];
+    int res = convert_ASN1TIME(notbefore, notbefore_str, 128);
+    if (res) {
+        tlscert->notbefore = xmpp_strdup(ctx, notbefore_str);
+    }
 
-    unsigned char buf[20];
+    tlscert->notafter = NULL;
+    ASN1_TIME *notafter = X509_get_notAfter(cert);
+    char notafter_str[128];
+    res = convert_ASN1TIME(notafter, notafter_str, 128);
+    if (res) {
+        tlscert->notafter = xmpp_strdup(ctx, notafter_str);
+    }
+
+    tlscert->fingerprint = NULL;
     const EVP_MD *digest = EVP_sha1();
+    unsigned char buf[20];
     unsigned len;
     int rc = X509_digest(cert, digest, (unsigned char*) buf, &len);
-    char strbuf[2*20+1];
     if (rc != 0 && len == 20) {
-        _hex_encode(buf, strbuf, 20);
-        tlscert->fp = xmpp_strdup(ctx, strbuf);
-    } else {
-        tlscert->fp = NULL;
+        char fingerprint[2*20+1];
+        _hex_encode(buf, fingerprint, 20);
+        tlscert->fingerprint = xmpp_strdup(ctx, fingerprint);
+    }
+
+    tlscert->version = ((int) X509_get_version(cert)) + 1;
+
+    tlscert->serialnumber = NULL;
+	ASN1_INTEGER *serial = X509_get_serialNumber(cert);
+	BIGNUM *bn = ASN1_INTEGER_to_BN(serial, NULL);
+	if (bn) {
+        char *serialnumber = BN_bn2dec(bn);
+        if (serialnumber) {
+            tlscert->serialnumber = xmpp_strdup(ctx, serialnumber);
+            OPENSSL_free(serialnumber);
+        } else {
+            OPENSSL_free(serialnumber);
+        }
+        BN_free(bn);
+	}
+
+    tlscert->keyalg = NULL;
+	int alg_nid = OBJ_obj2nid(cert->cert_info->key->algor->algorithm);
+	if (alg_nid != NID_undef) {
+        const char* keyalg = OBJ_nid2ln(alg_nid);
+        if (keyalg) {
+            tlscert->keyalg = xmpp_strdup(ctx, keyalg);
+        }
+    }
+
+    tlscert->sigalg = NULL;
+	alg_nid = OBJ_obj2nid(cert->sig_alg->algorithm);
+	if (alg_nid != NID_undef) {
+        const char* sigalg = OBJ_nid2ln(alg_nid);
+        if (sigalg) {
+            tlscert->sigalg = xmpp_strdup(ctx, sigalg);
+        }
     }
 
     return tlscert;
