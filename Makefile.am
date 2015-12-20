@@ -16,7 +16,7 @@ MESODE_LIBS = libmesode.la
 lib_LTLIBRARIES = libmesode.la
 
 libmesode_la_CFLAGS = $(SSL_CFLAGS) $(MESODE_FLAGS) $(PARSER_CFLAGS)
-libmesode_la_LDFLAGS = $(SSL_LIBS) $(PARSER_LIBS)
+libmesode_la_LDFLAGS = $(SSL_LIBS) $(PARSER_LIBS) -no-undefined
 # Export only public API
 libmesode_la_LDFLAGS += -export-symbols-regex '^xmpp_'
 libmesode_la_SOURCES = src/auth.c src/conn.c src/ctx.c \
