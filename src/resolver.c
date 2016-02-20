@@ -187,5 +187,3 @@ int resolver_srv_lookup(const char *service, const char *proto,
 
     return set;
 }
-
-/* FIXME: interface that returns array of results, maybe sorted by priority */

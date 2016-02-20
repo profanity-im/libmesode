@@ -19,6 +19,8 @@
 
 #include <stddef.h>     /* size_t */
 
+#include <stddef.h>     /* size_t */
+
 #if defined (_MSC_VER) && _MSC_VER < 1600
 typedef signed char int8_t;
 typedef short int int16_t;
