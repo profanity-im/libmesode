@@ -202,7 +202,10 @@ verify_callback(int preverify_ok, X509_STORE_CTX *x509_ctx)
 
         X509 *user_cert = sk_X509_value(sk, 0);
         struct _tlscert_t *tlscert = _x509_to_tlscert(_xmppconn->ctx, user_cert);
-        int cb_res = _xmppconn->certfail_handler(tlscert, errstr);
+        int cb_res = 0;
+        if (_xmppconn->certfail_handler) {
+            cb_res = _xmppconn->certfail_handler(tlscert, errstr);
+        }
         xmpp_conn_free_tlscert(_xmppconn->ctx, tlscert);
 
         _cert_handled = 1;
