@@ -287,6 +287,7 @@ int xmpp_conn_release(xmpp_conn_t * const conn)
         if (conn->pass) xmpp_free(ctx, conn->pass);
         if (conn->stream_id) xmpp_free(ctx, conn->stream_id);
         if (conn->lang) xmpp_free(ctx, conn->lang);
+        if (conn->tls_cert_path) xmpp_free(ctx, conn->tls_cert_path);
         xmpp_free(ctx, conn);
         released = 1;
     }
