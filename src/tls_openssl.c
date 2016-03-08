@@ -189,11 +189,13 @@ verify_callback(int preverify_ok, X509_STORE_CTX *x509_ctx)
     xmpp_debug(_xmppconn->ctx, "TLS", "ENDSTACK");
 
     if (preverify_ok) {
+        sk_X509_pop_free(sk, X509_free);
         return 1;
     } else if (_cert_handled) {
         if (_last_cb_res == 0) {
             X509_STORE_CTX_set_error(x509_ctx, X509_V_ERR_APPLICATION_VERIFICATION);
         }
+        sk_X509_pop_free(sk, X509_free);
         return _last_cb_res;
     } else {
         int err = X509_STORE_CTX_get_error(x509_ctx);
@@ -215,6 +217,7 @@ verify_callback(int preverify_ok, X509_STORE_CTX *x509_ctx)
             X509_STORE_CTX_set_error(x509_ctx, X509_V_ERR_APPLICATION_VERIFICATION);
         }
 
+        sk_X509_pop_free(sk, X509_free);
         return cb_res;
     }
 }
