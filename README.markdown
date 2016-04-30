@@ -10,7 +10,8 @@ Reasons for forking:
 
 This simplifies maintenance of the library when used in Profanity. 
 
-## Build Instructions
+Build Instructions
+------------------
 
 If you are building from a source control checkout, run:
 
@@ -23,9 +24,7 @@ From the top-level directory, run the following commands:
     ./configure
     make
 
-This will create a static library, also in the top-level
-directory, which can be linked into other programs. The 
-public API is defined in `mesode.h` which is also in the
+The public API is defined in `mesode.h` which is in the
 top-level directory.
 
 The `examples` directory contains some examples of how to
@@ -41,12 +40,3 @@ another path use the `--prefix` option during configure, e.g.:
 
     ./configure --prefix=/usr
 
-## Documentation
-
-API documentation is inline with the code and conforms to Doxygen
-standards. You can generate an HTML version of the API documentation
-by running:
-
-    doxygen
-
-Then open `docs/html/index.html`.

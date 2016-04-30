@@ -58,7 +58,17 @@ static void _handle_stream_end(char *name,
                                void * const userdata);
 static void _handle_stream_stanza(xmpp_stanza_t *stanza,
                                   void * const userdata);
-static unsigned short _conn_default_port(xmpp_conn_t * const conn);
+static unsigned short _conn_default_port(xmpp_conn_t * const conn,
+                                         xmpp_conn_type_t type);
+static void _conn_reset(xmpp_conn_t * const conn);
+static int _conn_connect(xmpp_conn_t * const conn,
+                         const char * const domain,
+                         const char * const host,
+                         unsigned short port,
+                         xmpp_conn_type_t type,
+                         xmpp_certfail_handler certfail_cb,
+                         xmpp_conn_handler callback,
+                         void * const userdata);
 
 /** Create a new Strophe connection object.
  *
@@ -82,6 +92,8 @@ xmpp_conn_t *xmpp_conn_new(xmpp_ctx_t * const ctx)
         conn->type = XMPP_UNKNOWN;
         conn->state = XMPP_STATE_DISCONNECTED;
         conn->sock = -1;
+        conn->ka_timeout = 0;
+        conn->ka_interval = 0;
         conn->tls = NULL;
         conn->timeout_stamp = 0;
         conn->error = 0;
@@ -126,7 +138,6 @@ xmpp_conn_t *xmpp_conn_new(xmpp_ctx_t * const ctx)
                                   _handle_stream_stanza,
                                   conn);
         conn->reset_parser = 0;
-        conn_prepare_reset(conn, auth_handle_open);
 
         conn->authenticated = 0;
         conn->conn_handler = NULL;
@@ -177,6 +188,34 @@ xmpp_conn_t *xmpp_conn_clone(xmpp_conn_t * const conn)
     return conn;
 }
 
+/** Set TCP keepalive parameters
+ *  Turn on TCP keepalive and set timeout and interval. Zero timeout
+ *  disables TCP keepalives. The parameters are applied immediately for
+ *  a non disconnected object. Also, they are applied when the connection
+ *  object connects successfully.
+ *
+ *  @param conn a Strophe connection object
+ *  @param timeout TCP keepalive timeout in seconds
+ *  @param interval TCP keepalive interval in seconds
+ *
+ *  @ingroup Connections
+ */
+void xmpp_conn_set_keepalive(xmpp_conn_t * const conn, int timeout, int interval)
+{
+    int ret = 0;
+
+    conn->ka_timeout = timeout;
+    conn->ka_interval = interval;
+
+    if (conn->state != XMPP_STATE_DISCONNECTED)
+        ret = sock_set_keepalive(conn->sock, timeout, interval);
+
+    if (ret < 0) {
+        xmpp_error(conn->ctx, "xmpp", "Setting TCP keepalive (%d,%d) error: %d",
+                   timeout, interval, sock_error());
+    }
+}
+
 /** Release a Strophe connection object.
  *  Decrement the reference count by one for a connection, freeing the
  *  connection object if the count reaches 0.
@@ -190,7 +229,6 @@ xmpp_conn_t *xmpp_conn_clone(xmpp_conn_t * const conn)
 int xmpp_conn_release(xmpp_conn_t * const conn)
 {
     xmpp_ctx_t *ctx;
-    xmpp_send_queue_t *sq, *tsq;
     xmpp_connlist_t *item, *prev;
     xmpp_handlist_t *hlitem, *thli;
     hash_iterator_t *iter;
@@ -263,29 +301,11 @@ int xmpp_conn_release(xmpp_conn_t * const conn)
             xmpp_free(ctx, thli);
         }
 
-        if (conn->stream_error) {
-            xmpp_stanza_release(conn->stream_error->stanza);
-            if (conn->stream_error->text)
-                xmpp_free(ctx, conn->stream_error->text);
-            xmpp_free(ctx, conn->stream_error);
-        }
-
         parser_free(conn->parser);
+        _conn_reset(conn);
 
-	/* free queued */
-	sq = conn->send_queue_head;
-	while (sq) {
-	    tsq = sq;
-	    sq = sq->next;
-	    xmpp_free(ctx, tsq->data);
-	    xmpp_free(ctx, tsq);
-	}
-
-        if (conn->domain) xmpp_free(ctx, conn->domain);
         if (conn->jid) xmpp_free(ctx, conn->jid);
-        if (conn->bound_jid) xmpp_free(ctx, conn->bound_jid);
         if (conn->pass) xmpp_free(ctx, conn->pass);
-        if (conn->stream_id) xmpp_free(ctx, conn->stream_id);
         if (conn->lang) xmpp_free(ctx, conn->lang);
         if (conn->tls_cert_path) xmpp_free(ctx, conn->tls_cert_path);
         xmpp_free(ctx, conn);
@@ -329,7 +349,7 @@ const char *xmpp_conn_get_bound_jid(const xmpp_conn_t * const conn)
 /** Set the JID of the user that will be bound to the connection.
  *  If any JID was previously set, it will be discarded.  This should not be
  *  be used after a connection is created.  The function will make a copy of
- *  the JID string.  If the supllied JID is missing the node, SASL
+ *  the JID string.  If the supplied JID is missing the node, SASL
  *  ANONYMOUS authentication will be used.
  *
  *  @param conn a Strophe connection object
@@ -385,7 +405,7 @@ xmpp_ctx_t* xmpp_conn_get_context(xmpp_conn_t * const conn)
 
 /** Initiate a connection to the XMPP server.
  *  This function returns immediately after starting the connection
- *  process to the XMPP server, and notifiations of connection state changes
+ *  process to the XMPP server, and notifications of connection state changes
  *  will be sent to the callback function.  The domain and port to connect to
  *  are usually determined by an SRV lookup for the xmpp-client service at
  *  the domain specified in the JID.  If SRV lookup fails, altdomain and
@@ -411,72 +431,50 @@ int xmpp_connect_client(xmpp_conn_t * const conn,
                         xmpp_conn_handler callback,
                         void * const userdata)
 {
-    char domain[2048];
+    char *buf = NULL;
+    char *domain;
+    const char *host;
     unsigned short port;
-    const char *prefdomain = NULL;
-    int found;
+    int found = 0;
+    int rc;
 
-    if (conn->state != XMPP_STATE_DISCONNECTED)
-        return -1;
-    if (conn->domain != NULL)
-        xmpp_free(conn->ctx, conn->domain);
-
-    conn->type = XMPP_CLIENT;
-    conn->secured = 0;
-    conn->tls_failed = 0;
-    conn->domain = xmpp_jid_domain(conn->ctx, conn->jid);
-    if (!conn->domain) return -1;
+    domain = xmpp_jid_domain(conn->ctx, conn->jid);
+    if (!domain) return -1;
 
     if (altdomain != NULL) {
         xmpp_debug(conn->ctx, "xmpp", "Connecting via altdomain.");
-        prefdomain = altdomain;
-        port = altport ? altport : _conn_default_port(conn);
-    } else {
-        found = resolver_srv_lookup("xmpp-client", "tcp", conn->domain,
-                                    domain, sizeof(domain), &port);
-        if (!found) {
-            xmpp_debug(conn->ctx, "xmpp", "SRV lookup failed, "
-                                          "connecting via domain.");
-            prefdomain = conn->domain;
-            port = altport ? altport : _conn_default_port(conn);
-        }
-        if (conn->tls_legacy_ssl) {
-            /* SSL tunneled connection on 5223 port is legacy and doesn't
-             * have an SRV record. Force port 5223 here unless altport is
-             * specified.
-             */
-            port = altport ? altport : XMPP_PORT_CLIENT_LEGACY_SSL;
+        host = altdomain;
+        port = altport ? altport : _conn_default_port(conn, XMPP_CLIENT);
+        found = 1;
+
+    /* SSL tunneled connection on 5223 port is legacy and doesn't
+     * have an SRV record. */
+    } else if (!conn->tls_legacy_ssl) {
+        host = buf = xmpp_alloc(conn->ctx, MAX_DOMAIN_LEN);
+        if (buf != NULL) {
+            found = resolver_srv_lookup("xmpp-client", "tcp", domain,
+                                        buf, MAX_DOMAIN_LEN, &port);
         }
     }
-    if (prefdomain != NULL) {
-        strncpy(domain, prefdomain, sizeof(domain));
-        domain[sizeof(domain) - 1] = '\0';
+
+    if (!found) {
+        xmpp_debug(conn->ctx, "xmpp", "SRV lookup failed, "
+                                      "connecting via domain.");
+        host = domain;
+        port = altport ? altport : _conn_default_port(conn, XMPP_CLIENT);
     }
-    conn->sock = sock_connect(domain, port);
-    xmpp_debug(conn->ctx, "xmpp", "sock_connect to %s:%u returned %d",
-               domain, port, conn->sock);
-    if (conn->sock == -1) return -1;
 
-    /* setup handler */
-    conn->certfail_handler = certfail_cb;
-    conn->conn_handler = callback;
-    conn->userdata = userdata;
+    rc = _conn_connect(conn, domain, host, port, XMPP_CLIENT,
+                       certfail_cb, callback, userdata);
+    xmpp_free(conn->ctx, domain);
+    if (buf) xmpp_free(conn->ctx, buf);
 
-    /* FIXME: it could happen that the connect returns immediately as
-     * successful, though this is pretty unlikely.  This would be a little
-     * hard to fix, since we'd have to detect and fire off the callback
-     * from within the event loop */
-
-    conn->state = XMPP_STATE_CONNECTING;
-    conn->timeout_stamp = time_stamp();
-    xmpp_debug(conn->ctx, "xmpp", "attempting to connect to %s", domain);
-
-    return 0;
+    return rc;
 }
 
 /** Initiate a component connection to server.
  *  This function returns immediately after starting the connection
- *  process to the XMPP server, and notifiations of connection state changes
+ *  process to the XMPP server, and notifications of connection state changes
  *  will be sent to the internal callback function that will set up handler
  *  for the component handshake as defined in XEP-0114.
  *  The domain and port to connect to must be provided in this case as the JID
@@ -501,50 +499,22 @@ int xmpp_connect_component(xmpp_conn_t * const conn, const char * const server,
                            unsigned short port, xmpp_conn_handler callback,
                            void * const userdata)
 {
-    unsigned short connectport;
-
-    if (conn->state != XMPP_STATE_DISCONNECTED)
-        return -1;
-    if (conn->domain != NULL)
-        xmpp_free(conn->ctx, conn->domain);
-
-    conn->type = XMPP_COMPONENT;
-    conn->secured = 0;
-    conn->tls_failed = 0;
-    /* JID serves as an identificator here and will be used as "to" attribute
-       of the stream */
-    conn->domain = xmpp_strdup(conn->ctx, conn->jid);
-
     /*  The server domain, jid and password MUST be specified. */
     if (!(server && conn->jid && conn->pass)) return -1;
 
-    connectport = port ? port : _conn_default_port(conn);
-
-    xmpp_debug(conn->ctx, "xmpp", "Connecting via %s", server);
-    conn->sock = sock_connect(server, connectport);
-    xmpp_debug(conn->ctx, "xmpp", "sock_connect to %s:%u returned %d",
-               server, connectport, conn->sock);
-    if (conn->sock == -1) return -1;
-
     /* XEP-0114 does not support TLS */
-    conn->tls_disabled = 1;
+    xmpp_conn_disable_tls(conn);
+    if (!conn->tls_disabled) {
+        xmpp_error(conn->ctx, "conn", "Failed to disable TLS. "
+                                      "XEP-0114 does not support TLS");
+        return -1;
+    }
 
-    /* setup handler */
-    conn->conn_handler = callback;
-    conn->userdata = userdata;
-
-    conn_prepare_reset(conn, auth_handle_component_open);
-
-    /* FIXME: it could happen that the connect returns immediately as
-     * successful, though this is pretty unlikely.  This would be a little
-     * hard to fix, since we'd have to detect and fire off the callback
-     * from within the event loop */
-
-    conn->state = XMPP_STATE_CONNECTING;
-    conn->timeout_stamp = time_stamp();
-    xmpp_debug(conn->ctx, "xmpp", "attempting to connect to %s", server);
-
-    return 0;
+    port = port ? port : _conn_default_port(conn, XMPP_COMPONENT);
+    /* JID serves as an identifier here and will be used as "to" attribute
+       of the stream */
+    return _conn_connect(conn, conn->jid, server, port, XMPP_COMPONENT,
+                         NULL, callback, userdata);
 }
 
 /** Cleanly disconnect the connection.
@@ -643,6 +613,8 @@ void xmpp_disconnect(xmpp_conn_t * const conn)
  *  @param conn a Strophe connection object
  *  @param fmt a printf-style format string followed by a variable list of
  *      arguments to format
+ *
+ *  @ingroup Connections
  */
 void xmpp_send_raw_string(xmpp_conn_t * const conn,
                           const char * const fmt, ...)
@@ -684,13 +656,15 @@ void xmpp_send_raw_string(xmpp_conn_t * const conn,
 
 /** Send raw bytes to the XMPP server.
  *  This function is a convenience function to send raw bytes to the
- *  XMPP server.  It is usedly primarly by xmpp_send_raw_string.  This
+ *  XMPP server.  It is used primarily by xmpp_send_raw_string().  This
  *  function should be used with care as it does not validate the bytes and
  *  invalid data may result in stream termination by the XMPP server.
  *
  *  @param conn a Strophe connection object
  *  @param data a buffer of raw bytes
  *  @param len the length of the data in the buffer
+ *
+ *  @ingroup Connections
  */
 void xmpp_send_raw(xmpp_conn_t * const conn,
                    const char * const data, const size_t len)
@@ -781,7 +755,7 @@ int conn_tls_start(xmpp_conn_t * const conn)
         conn->tls = NULL;
         rc = -ENOSYS;
     } else {
-        conn->tls = tls_new(conn);
+        conn->tls = tls_new(conn->ctx, conn->sock, conn->certfail_handler, conn->tls_cert_path);
         rc = conn->tls == NULL ? -ENOMEM : 0;
     }
 
@@ -808,6 +782,8 @@ int conn_tls_start(xmpp_conn_t * const conn)
  *  @param conn a Strophe connection object
  *
  *  @return ORed connection flags that are applied for the connection.
+ *
+ *  @ingroup Connections
  */
 long xmpp_conn_get_flags(const xmpp_conn_t * const conn)
 {
@@ -837,6 +813,8 @@ long xmpp_conn_get_flags(const xmpp_conn_t * const conn)
  *  @param flags ORed connection flags
  *
  *  @return 0 on success or -1 if flags can't be applied.
+ *
+ *  @ingroup Connections
  */
 int xmpp_conn_set_flags(xmpp_conn_t * const conn, long flags)
 {
@@ -866,10 +844,15 @@ int xmpp_conn_set_flags(xmpp_conn_t * const conn, long flags)
  *
  *  @note this function is deprecated
  *  @see xmpp_conn_set_flags()
+ *
+ *  @ingroup Connections
  */
 void xmpp_conn_disable_tls(xmpp_conn_t * const conn)
 {
-    conn->tls_disabled = 1;
+    long flags = xmpp_conn_get_flags(conn);
+
+    flags |= XMPP_CONN_FLAG_DISABLE_TLS;
+    (void)xmpp_conn_set_flags(conn, flags);
 }
 
 void xmpp_conn_tlscert_path(xmpp_conn_t * const conn, char *path)
@@ -877,7 +860,12 @@ void xmpp_conn_tlscert_path(xmpp_conn_t * const conn, char *path)
     conn->tls_cert_path = xmpp_strdup(conn->ctx, path);
 }
 
-/** Returns whether TLS session is established or not. */
+/** Return whether TLS session is established or not.
+ *
+ *  @return TRUE if TLS session is established and FALSE otherwise
+ *
+ *  @ingroup Connections
+ */
 int xmpp_conn_is_secured(xmpp_conn_t * const conn)
 {
     return conn->secured && !conn->tls_failed && conn->tls != NULL ? 1 : 0;
@@ -995,27 +983,31 @@ static void _handle_stream_start(char *name, char **attrs,
     xmpp_conn_t *conn = (xmpp_conn_t *)userdata;
     char *id;
 
-    if (strcmp(name, "stream")) {
-        printf("name = %s\n", name);
-        xmpp_error(conn->ctx, "conn", "Server did not open valid stream.");
-        conn_disconnect(conn);
-    } else {
+    if (conn->stream_id) xmpp_free(conn->ctx, conn->stream_id);
+    conn->stream_id = NULL;
+
+    if (strcmp(name, "stream") == 0) {
         _log_open_tag(conn, attrs);
-
-        if (conn->stream_id) xmpp_free(conn->ctx, conn->stream_id);
-
         id = _get_stream_attribute(attrs, "id");
         if (id)
             conn->stream_id = xmpp_strdup(conn->ctx, id);
 
-        if (!conn->stream_id) {
+        /* check and log errors */
+        if (!id)
+            xmpp_error(conn->ctx, "conn", "No id attribute.");
+        else if (!conn->stream_id)
             xmpp_error(conn->ctx, "conn", "Memory allocation failed.");
-            conn_disconnect(conn);
-        }
+    } else {
+        xmpp_error(conn->ctx, "conn", "Server did not open valid stream."
+                                      " name = %s.", name);
     }
 
-    /* call stream open handler */
-    conn->open_handler(conn);
+    if (conn->stream_id) {
+        /* call stream open handler */
+        conn->open_handler(conn);
+    } else {
+        conn_disconnect(conn);
+    }
 }
 
 static void _handle_stream_end(char *name,
@@ -1043,15 +1035,99 @@ static void _handle_stream_stanza(xmpp_stanza_t *stanza,
     handler_fire_stanza(conn, stanza);
 }
 
-static unsigned short _conn_default_port(xmpp_conn_t * const conn)
+static unsigned short _conn_default_port(xmpp_conn_t * const conn,
+                                         xmpp_conn_type_t type)
 {
-    switch (conn->type) {
+    switch (type) {
     case XMPP_CLIENT:
         return conn->tls_legacy_ssl ? XMPP_PORT_CLIENT_LEGACY_SSL :
                                       XMPP_PORT_CLIENT;
     case XMPP_COMPONENT:
         return XMPP_PORT_COMPONENT;
     default:
-        return -1;
+        return 0;
     };
+}
+
+static void _conn_reset(xmpp_conn_t * const conn)
+{
+    xmpp_ctx_t *ctx = conn->ctx;
+    xmpp_send_queue_t *sq, *tsq;
+
+    if (conn->state != XMPP_STATE_DISCONNECTED) {
+        xmpp_debug(ctx, "conn", "Can't reset connected object.");
+        return;
+    }
+
+    /* free queued */
+    sq = conn->send_queue_head;
+    while (sq) {
+        tsq = sq;
+        sq = sq->next;
+        xmpp_free(ctx, tsq->data);
+        xmpp_free(ctx, tsq);
+    }
+
+    if (conn->stream_error) {
+        xmpp_stanza_release(conn->stream_error->stanza);
+        if (conn->stream_error->text)
+            xmpp_free(ctx, conn->stream_error->text);
+        xmpp_free(ctx, conn->stream_error);
+        conn->stream_error = NULL;
+    }
+
+    if (conn->domain) xmpp_free(ctx, conn->domain);
+    if (conn->bound_jid) xmpp_free(ctx, conn->bound_jid);
+    if (conn->stream_id) xmpp_free(ctx, conn->stream_id);
+    conn->domain = NULL;
+    conn->bound_jid = NULL;
+    conn->stream_id = NULL;
+    conn->secured = 0;
+    conn->tls_failed = 0;
+    conn->error = 0;
+}
+
+static int _conn_connect(xmpp_conn_t * const conn,
+                         const char * const domain,
+                         const char * const host,
+                         unsigned short port,
+                         xmpp_conn_type_t type,
+                         xmpp_certfail_handler certfail_cb,
+                         xmpp_conn_handler callback,
+                         void * const userdata)
+{
+    if (conn->state != XMPP_STATE_DISCONNECTED) return -1;
+    if (type != XMPP_CLIENT && type != XMPP_COMPONENT) return -1;
+
+    _conn_reset(conn);
+
+    conn->type = type;
+    conn->domain = xmpp_strdup(conn->ctx, domain);
+    if (!conn->domain) return -1;
+
+    conn->sock = sock_connect(host, port);
+    xmpp_debug(conn->ctx, "xmpp", "sock_connect() to %s:%u returned %d",
+               host, port, conn->sock);
+    if (conn->sock == -1) return -1;
+    if (conn->ka_timeout || conn->ka_interval)
+        sock_set_keepalive(conn->sock, conn->ka_timeout, conn->ka_interval);
+
+    /* setup handler */
+    conn->certfail_handler = certfail_cb;
+    conn->conn_handler = callback;
+    conn->userdata = userdata;
+
+    conn_prepare_reset(conn, type == XMPP_CLIENT ? auth_handle_open :
+                                                   auth_handle_component_open);
+
+    /* FIXME: it could happen that the connect returns immediately as
+     * successful, though this is pretty unlikely.  This would be a little
+     * hard to fix, since we'd have to detect and fire off the callback
+     * from within the event loop */
+
+    conn->state = XMPP_STATE_CONNECTING;
+    conn->timeout_stamp = time_stamp();
+    xmpp_debug(conn->ctx, "xmpp", "Attempting to connect to %s", host);
+
+    return 0;
 }

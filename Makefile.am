@@ -9,7 +9,7 @@ PARSER_LIBS=@PARSER_LIBS@
 SSL_CFLAGS = @openssl_CFLAGS@
 SSL_LIBS = @openssl_LIBS@
 
-DIST_LIBS = @DIST_LIBS@
+RESOLV_LIBS = @RESOLV_LIBS@
 
 MESODE_FLAGS = -I$(top_srcdir)
 MESODE_LIBS = libmesode.la
@@ -18,25 +18,37 @@ MESODE_LIBS = libmesode.la
 lib_LTLIBRARIES = libmesode.la
 
 libmesode_la_CFLAGS = $(SSL_CFLAGS) $(MESODE_FLAGS) $(PARSER_CFLAGS)
-libmesode_la_LDFLAGS = $(SSL_LIBS) $(PARSER_LIBS) $(DIST_LIBS) -no-undefined
+libmesode_la_LDFLAGS = $(SSL_LIBS) $(PARSER_LIBS) $(RESOLV_LIBS) -no-undefined
 # Export only public API
 libmesode_la_LDFLAGS += -export-symbols-regex '^xmpp_'
-libmesode_la_SOURCES = src/auth.c src/conn.c src/ctx.c \
+libmesode_la_SOURCES = src/auth.c src/conn.c src/crypto.c src/ctx.c \
 	src/event.c src/handler.c src/hash.c src/jid.c src/md5.c \
 	src/resolver.c src/sasl.c src/scram.c src/sha1.c \
-	src/snprintf.c src/sock.c src/stanza.c \
-	src/tls_openssl.c src/util.c src/rand.c src/uuid.c \
+	src/snprintf.c src/sock.c src/stanza.c src/util.c \
+	src/rand.c src/uuid.c \
 	src/common.h src/hash.h src/md5.h src/ostypes.h src/parser.h \
 	src/resolver.h src/sasl.h src/scram.h src/sha1.h src/snprintf.h \
 	src/sock.h src/tls.h src/util.h src/rand.h
 
+if DISABLE_TLS
+libmesode_la_SOURCES += src/tls_dummy.c
+else
+libmesode_la_SOURCES += src/tls_openssl.c
+endif
+
+if PARSER_EXPAT
 libmesode_la_SOURCES += src/parser_expat.c
+else
+libmesode_la_SOURCES += src/parser_libxml2.c
+endif
 
 include_HEADERS = mesode.h
 
 pkgconfig_DATA = libmesode.pc
 
-EXTRA_DIST = docs
+EXTRA_DIST = docs rpm Doxyfile LICENSE.txt GPL-LICENSE.txt MIT-LICENSE.txt \
+	src/tls_dummy.c src/tls_gnutls.c src/tls_schannel.c \
+	examples/README.md
 
 ## Examples
 noinst_PROGRAMS = examples/active examples/roster examples/basic examples/bot \
@@ -62,8 +74,8 @@ examples_uuid_LDADD = $(MESODE_LIBS)
 
 ## Tests
 TESTS = tests/check_parser tests/test_sha1 tests/test_md5 tests/test_rand \
-	tests/test_scram tests/test_base64 tests/test_snprintf \
-	tests/test_resolver
+	tests/test_scram tests/test_ctx tests/test_base64 tests/test_jid \
+	tests/test_snprintf tests/test_resolver
 check_PROGRAMS = $(TESTS)
 
 tests_check_parser_SOURCES = tests/check_parser.c tests/test.h
@@ -72,15 +84,25 @@ tests_check_parser_CFLAGS = @check_CFLAGS@ $(PARSER_CFLAGS) $(MESODE_FLAGS) \
 tests_check_parser_LDADD = @check_LIBS@ $(MESODE_LIBS)
 tests_check_parser_LDFLAGS = -static
 
+tests_test_ctx_SOURCES = tests/test_ctx.c
+tests_test_ctx_CFLAGS = $(MESODE_FLAGS) -I$(top_srcdir)/src
+tests_test_ctx_LDADD = $(MESODE_LIBS)
+tests_test_ctx_LDFLAGS = -static
+
 tests_test_base64_SOURCES = tests/test_base64.c tests/test.c tests/test.h
 tests_test_base64_CFLAGS = $(MESODE_FLAGS) -I$(top_srcdir)/src
 tests_test_base64_LDADD = $(MESODE_LIBS)
 tests_test_base64_LDFLAGS = -static
 
-tests_test_resolver_SOURCES = tests/test_resolver.c tests/test.h
+tests_test_jid_SOURCES = tests/test_jid.c
+tests_test_jid_CFLAGS = $(MESODE_FLAGS) -I$(top_srcdir)/src
+tests_test_jid_LDADD = $(MESODE_LIBS)
+tests_test_jid_LDFLAGS = -static
+
+tests_test_resolver_SOURCES = tests/test_resolver.c tests/test.h \
+	src/resolver.c src/snprintf.c
 tests_test_resolver_CFLAGS = $(MESODE_FLAGS) -I$(top_srcdir)/src
-tests_test_resolver_LDADD = $(MESODE_LIBS)
-tests_test_resolver_LDFLAGS = -static
+tests_test_resolver_LDADD = $(RESOLV_LIBS)
 
 tests_test_rand_SOURCES = tests/test_rand.c tests/test.c src/sha1.c
 tests_test_rand_CFLAGS = $(MESODE_FLAGS) -I$(top_srcdir)/src

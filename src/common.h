@@ -130,10 +130,12 @@ struct _xmpp_handlist_t {
     };
 };
 
-#define SASL_MASK_PLAIN 0x01
-#define SASL_MASK_DIGESTMD5 0x02
-#define SASL_MASK_ANONYMOUS 0x04
-#define SASL_MASK_SCRAMSHA1 0x08
+#define MAX_DOMAIN_LEN 256
+
+#define SASL_MASK_PLAIN     (1 << 0)
+#define SASL_MASK_DIGESTMD5 (1 << 1)
+#define SASL_MASK_ANONYMOUS (1 << 2)
+#define SASL_MASK_SCRAMSHA1 (1 << 3)
 
 enum {
     XMPP_PORT_CLIENT = 5222,
@@ -152,9 +154,12 @@ struct _xmpp_conn_t {
     uint64_t timeout_stamp;
     int error;
     xmpp_stream_error_t *stream_error;
-    sock_t sock;
-    tls_t *tls;
 
+    sock_t sock;
+    int ka_timeout; /* TCP keepalive timeout */
+    int ka_interval; /* TCP keepalive interval */
+
+    tls_t *tls;
     int tls_support;
     int tls_disabled;
     char *tls_cert_path;
@@ -171,8 +176,6 @@ struct _xmpp_conn_t {
 
     char *lang;
     char *domain;
-    char *connectdomain;
-    char *connectport;
     char *jid;
     char *pass;
     char *bound_jid;

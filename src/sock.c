@@ -22,6 +22,7 @@
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <netdb.h>
 #include <fcntl.h>
 
@@ -70,13 +71,42 @@ sock_t sock_connect(const char * const host, const unsigned short port)
             if (err == 0 || _in_progress(sock_error()))
                 break;
         }
-
-        close(sock);
+        sock_close(sock);
     }
     freeaddrinfo(res);
     sock = ainfo == NULL ? -1 : sock;
 
     return sock;
+}
+
+int sock_set_keepalive(const sock_t sock, int timeout, int interval)
+{
+    int ret;
+    int optval = (timeout && interval) ? 1 : 0;
+
+    /* This function doesn't change maximum number of keepalive probes */
+
+    ret = setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval));
+    if (ret < 0)
+        return ret;
+
+    if (optval) {
+#ifdef TCP_KEEPIDLE
+        ret = setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, &timeout, sizeof(timeout));
+#else
+        /* QNX receives `struct timeval' as argument, but it seems OSX does int */
+        ret = setsockopt(sock, IPPROTO_TCP, TCP_KEEPALIVE, &timeout, sizeof(timeout));
+#endif /* TCP_KEEPIDLE */
+        if (ret < 0)
+            return ret;
+#ifdef TCP_KEEPINTVL
+        ret = setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(interval));
+        if (ret < 0)
+            return ret;
+#endif /* TCP_KEEPINTVL */
+    }
+
+    return ret;
 }
 
 int sock_close(const sock_t sock)

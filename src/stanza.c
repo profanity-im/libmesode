@@ -24,7 +24,7 @@
 #include "hash.h"
 
 /** Create a stanza object.
- *  This function allocates and initializes and blank stanza object.
+ *  This function allocates and initializes a blank stanza object.
  *  The stanza will have a reference count of one, so the caller does not
  *  need to clone it.
  *
@@ -223,7 +223,7 @@ int xmpp_stanza_is_tag(xmpp_stanza_t * const stanza)
 }
 
 /* Escape a string with for use in a XML text node or attribute. Assumes that
- * the input string is encoded in UTF-8. On sucess, returns a pointer to a
+ * the input string is encoded in UTF-8. On success, returns a pointer to a
  * buffer with the resulting data which must be xmpp_free()'d by the caller.
  * On failure, returns NULL.
  */
@@ -298,7 +298,7 @@ static inline void _render_update(int *written, const int length,
 
 /* always returns number of bytes written or that would have been
  * written if the buffer was large enough
- * return values < 0 indicate some error occured,
+ * return values < 0 indicate some error occurred,
  * and return values > buflen indicate buffer was not large enough
  */
 static int _render_stanza_recursive(xmpp_stanza_t *stanza,
@@ -328,7 +328,7 @@ static int _render_stanza_recursive(xmpp_stanza_t *stanza,
     } else { /* stanza->type == XMPP_STANZA_TAG */
 	if (!stanza->data) return XMPP_EINVOP;
 
-	/* write begining of tag and attributes */
+	/* write beginning of tag and attributes */
 	ret = xmpp_snprintf(ptr, left, "<%s", stanza->data);
 	if (ret < 0) return XMPP_EMEM;
 	_render_update(&written, buflen, ret, &left, &ptr);
@@ -411,9 +411,9 @@ static int _render_stanza_recursive(xmpp_stanza_t *stanza,
  *
  *  @ingroup Stanza
  */
-int  xmpp_stanza_to_text(xmpp_stanza_t *stanza,
-			 char ** const buf,
-			 size_t * const buflen)
+int xmpp_stanza_to_text(xmpp_stanza_t *stanza,
+                        char ** const buf,
+                        size_t * const buflen)
 {
     char *buffer, *tmp;
     size_t length;
@@ -487,7 +487,7 @@ int xmpp_stanza_set_name(xmpp_stanza_t *stanza,
  *
  *  @ingroup Stanza
  */
-char *xmpp_stanza_get_name(xmpp_stanza_t * const stanza)
+const char *xmpp_stanza_get_name(xmpp_stanza_t * const stanza)
 {
     if (stanza->type == XMPP_STANZA_TEXT) return NULL;
     return stanza->data;
@@ -665,7 +665,7 @@ int xmpp_stanza_set_text(xmpp_stanza_t *stanza,
 }
 
 /** Set the text data for a text stanza.
- *  This function copies the text given and sets teh stanza object's text to
+ *  This function copies the text given and sets the stanza object's text to
  *  it.  Attempting to use this function on a stanza that has a name will
  *  fail with XMPP_EINVOP.  This function takes the text as buffer and a length
  *  as opposed to a null-terminated string.
@@ -706,7 +706,7 @@ int xmpp_stanza_set_text_with_size(xmpp_stanza_t *stanza,
  *
  *  @ingroup Stanza
  */
-char *xmpp_stanza_get_id(xmpp_stanza_t * const stanza)
+const char *xmpp_stanza_get_id(xmpp_stanza_t * const stanza)
 {
     return xmpp_stanza_get_attribute(stanza, "id");
 }
@@ -721,7 +721,7 @@ char *xmpp_stanza_get_id(xmpp_stanza_t * const stanza)
  *
  *  @ingroup Stanza
  */
-char *xmpp_stanza_get_ns(xmpp_stanza_t * const stanza)
+const char *xmpp_stanza_get_ns(xmpp_stanza_t * const stanza)
 {
     return xmpp_stanza_get_attribute(stanza, "xmlns");
 }
@@ -736,7 +736,7 @@ char *xmpp_stanza_get_ns(xmpp_stanza_t * const stanza)
  *
  *  @ingroup Stanza
  */
-char *xmpp_stanza_get_type(xmpp_stanza_t * const stanza)
+const char *xmpp_stanza_get_type(xmpp_stanza_t * const stanza)
 {
     return xmpp_stanza_get_attribute(stanza, "type");
 }
@@ -751,7 +751,7 @@ char *xmpp_stanza_get_type(xmpp_stanza_t * const stanza)
  *
  *  @ingroup Stanza
  */
-char *xmpp_stanza_get_to(xmpp_stanza_t * const stanza)
+const char *xmpp_stanza_get_to(xmpp_stanza_t * const stanza)
 {
     return xmpp_stanza_get_attribute(stanza, "to");
 }
@@ -766,7 +766,7 @@ char *xmpp_stanza_get_to(xmpp_stanza_t * const stanza)
  *
  *  @ingroup Stanza
  */
-char *xmpp_stanza_get_from(xmpp_stanza_t * const stanza)
+const char *xmpp_stanza_get_from(xmpp_stanza_t * const stanza)
 {
     return xmpp_stanza_get_attribute(stanza, "from");
 }
@@ -911,7 +911,7 @@ char *xmpp_stanza_get_text(xmpp_stanza_t * const stanza)
  *
  *  @ingroup Stanza
  */
-char *xmpp_stanza_get_text_ptr(xmpp_stanza_t * const stanza)
+const char *xmpp_stanza_get_text_ptr(xmpp_stanza_t * const stanza)
 {
     if (stanza->type == XMPP_STANZA_TEXT)
 	return stanza->data;
@@ -1000,8 +1000,8 @@ int xmpp_stanza_set_from(xmpp_stanza_t * const stanza,
  *
  *  @ingroup Stanza
  */
-char *xmpp_stanza_get_attribute(xmpp_stanza_t * const stanza,
-				const char * const name)
+const char *xmpp_stanza_get_attribute(xmpp_stanza_t * const stanza,
+                                      const char * const name)
 {
     if (stanza->type != XMPP_STANZA_TAG)
 	return NULL;
@@ -1072,4 +1072,141 @@ xmpp_stanza_t *xmpp_stanza_reply(xmpp_stanza_t * const stanza)
 copy_error:
     if (copy) xmpp_stanza_release(copy);
     return NULL;
+}
+
+static xmpp_stanza_t *
+_stanza_new_with_attrs(xmpp_ctx_t *ctx, const char * const name,
+                       const char * const type, const char * const id,
+                       const char * const to)
+{
+    xmpp_stanza_t *stanza = xmpp_stanza_new(ctx);
+    int ret;
+
+    if (stanza) {
+        ret = xmpp_stanza_set_name(stanza, name);
+        if (ret == XMPP_EOK && type)
+            ret = xmpp_stanza_set_type(stanza, type);
+        if (ret == XMPP_EOK && id)
+            ret = xmpp_stanza_set_id(stanza, id);
+        if (ret == XMPP_EOK && to)
+            ret = xmpp_stanza_set_to(stanza, to);
+        if (ret != XMPP_EOK) {
+            xmpp_stanza_release(stanza);
+            stanza = NULL;
+        }
+    }
+    return stanza;
+}
+
+/** Create a <message/> stanza object with given attributes.
+ *  Attributes are optional and may be NULL.
+ *
+ *  @param type attribute 'type'
+ *  @param to attribute 'to'
+ *  @param id attribute 'id'
+ *
+ *  @return a new Strophe stanza object
+ *
+ *  @ingroup Stanza
+ */
+xmpp_stanza_t *xmpp_message_new(xmpp_ctx_t *ctx, const char * const type,
+                                const char * const to, const char * const id)
+{
+    return _stanza_new_with_attrs(ctx, "message", type, id, to);
+}
+
+/** Get text from <body/> child element.
+ *  This function returns new allocated string. The caller is responsible
+ *  for freeing this string with xmpp_free().
+ *
+ *  @param msg well formed <message/> stanza
+ *
+ *  @return allocated string or NULL on failure (no <body/> element or
+ *      memory allocation error)
+ *
+ *  @ingroup Stanza
+ */
+char *xmpp_message_get_body(xmpp_stanza_t *msg)
+{
+    xmpp_stanza_t *body;
+    const char *name;
+    char *text = NULL;
+
+    name = xmpp_stanza_get_name(msg);
+    body = xmpp_stanza_get_child_by_name(msg, "body");
+    if (name && strcmp(name, "message") == 0 && body) {
+        text = xmpp_stanza_get_text(body);
+    }
+    return text;
+}
+
+/** Add <body/> child element to a <message/> stanza with the given text.
+ *
+ *  @param msg a <message> stanza object without <body/> child element.
+ *
+ *  @return 0 on success (XMPP_EOK), and a number less than 0 on failure
+ *      (XMPP_EMEM, XMPP_EINVOP)
+ *
+ *  @ingroup Stanza
+ */
+int xmpp_message_set_body(xmpp_stanza_t *msg, const char * const text)
+{
+    xmpp_ctx_t *ctx = msg->ctx;
+    xmpp_stanza_t *body;
+    xmpp_stanza_t *text_stanza;
+    const char *name;
+    int ret;
+
+    /* check that msg is a <message/> stanza and doesn't contain <body/> */
+    name = xmpp_stanza_get_name(msg);
+    body = xmpp_stanza_get_child_by_name(msg, "body");
+    if (!name || strcmp(name, "message") != 0 || body)
+        return XMPP_EINVOP;
+
+    body = xmpp_stanza_new(ctx);
+    text_stanza = xmpp_stanza_new(ctx);
+
+    ret = body && text_stanza ? XMPP_EOK : XMPP_EMEM;
+    if (ret == XMPP_EOK)
+        ret = xmpp_stanza_set_name(body, "body");
+    if (ret == XMPP_EOK)
+        ret = xmpp_stanza_set_text(text_stanza, text);
+    if (ret == XMPP_EOK)
+        ret = xmpp_stanza_add_child(body, text_stanza);
+    if (ret == XMPP_EOK)
+        ret = xmpp_stanza_add_child(msg, body);
+
+    if (text_stanza)
+        xmpp_stanza_release(text_stanza);
+    if (body)
+        xmpp_stanza_release(body);
+
+    return ret;
+}
+
+/** Create an <iq/> stanza object with given attributes.
+ *  Attributes are optional and may be NULL.
+ *
+ *  @param type attribute 'type'
+ *  @param id attribute 'id'
+ *
+ *  @return a new Strophe stanza object
+ *
+ *  @ingroup Stanza
+ */
+xmpp_stanza_t *xmpp_iq_new(xmpp_ctx_t *ctx, const char * const type,
+                           const char * const id)
+{
+    return _stanza_new_with_attrs(ctx, "iq", type, id, NULL);
+}
+
+/** Create a <presence/> stanza object.
+ *
+ *  @return a new Strophe stanza object
+ *
+ *  @ingroup Stanza
+ */
+xmpp_stanza_t *xmpp_presence_new(xmpp_ctx_t *ctx)
+{
+    return _stanza_new_with_attrs(ctx, "presence", NULL, NULL, NULL);
 }
