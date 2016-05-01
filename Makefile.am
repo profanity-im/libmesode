@@ -36,11 +36,7 @@ else
 libmesode_la_SOURCES += src/tls_openssl.c
 endif
 
-if PARSER_EXPAT
 libmesode_la_SOURCES += src/parser_expat.c
-else
-libmesode_la_SOURCES += src/parser_libxml2.c
-endif
 
 include_HEADERS = mesode.h
 

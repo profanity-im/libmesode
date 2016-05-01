@@ -83,7 +83,6 @@ m4_ifdef([PKG_INSTALLDIR], [PKG_INSTALLDIR],
         [],[with_pkgconfigdir='$(libdir)/pkgconfig'])
     AC_SUBST([pkgconfigdir], [${with_pkgconfigdir}])])
 
-AM_CONDITIONAL([PARSER_EXPAT], [true])
 AM_CONDITIONAL([DISABLE_TLS], [test x$enable_tls = xno])
 
 AC_SUBST([PC_REQUIRES], [${PC_REQUIRES}])
