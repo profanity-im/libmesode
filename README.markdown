@@ -10,6 +10,8 @@ Reasons for forking:
 
 This simplifies maintenance of the library when used in Profanity. 
 
+Whilst Profanity will run against libstrophe, libmesode provides extra TLS functionality such as manual SSL certificate verification.
+
 Build Instructions
 ------------------
 
