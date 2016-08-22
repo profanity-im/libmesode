@@ -60,4 +60,8 @@ libmesode.project
 .tern-project
 compile_commands.json
 libmesode.workspace
+libs/
+obj/
+expat/
+docs/doxygen_sqlite3.db
 
