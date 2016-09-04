@@ -24,6 +24,7 @@
 #include "sha1.h"
 #include "scram.h"
 #include "rand.h"
+#include "util.h"
 
 /** generate authentication string for the SASL PLAIN mechanism */
 char *sasl_plain(xmpp_ctx_t *ctx, const char *authid, const char *password) {
@@ -70,7 +71,7 @@ static char *_make_string(xmpp_ctx_t *ctx, const char *s, const unsigned len)
 static char *_make_quoted(xmpp_ctx_t *ctx, const char *s)
 {
     char *result;
-    int len = strlen(s);
+    size_t len = strlen(s);
 
     result = xmpp_alloc(ctx, len + 3);
     if (result != NULL) {

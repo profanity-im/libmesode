@@ -266,8 +266,8 @@ tls_t *tls_new(xmpp_ctx_t *ctx, sock_t sock, xmpp_certfail_handler certfail_hand
             goto err;
 
         SSL_CTX_set_client_cert_cb(tls->ssl_ctx, NULL);
-        SSL_CTX_set_mode (tls->ssl_ctx, SSL_MODE_ENABLE_PARTIAL_WRITE);
-        SSL_CTX_set_verify (tls->ssl_ctx, SSL_VERIFY_PEER, verify_callback);
+        SSL_CTX_set_mode(tls->ssl_ctx, SSL_MODE_ENABLE_PARTIAL_WRITE);
+        SSL_CTX_set_verify(tls->ssl_ctx, SSL_VERIFY_PEER, verify_callback);
         if (tls_cert_path) {
             SSL_CTX_load_verify_locations(tls->ssl_ctx, NULL, tls_cert_path);
         }
@@ -327,7 +327,6 @@ int tls_start(tls_t *tls)
     _tls_set_error(tls, error);
 
     return ret <= 0 ? 0 : 1;
-
 }
 
 int tls_stop(tls_t *tls)

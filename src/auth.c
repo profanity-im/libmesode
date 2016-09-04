@@ -288,6 +288,7 @@ static int _handle_proceedtls_default(xmpp_conn_t * const conn,
         xmpp_debug(conn->ctx, "xmpp", "proceeding with TLS");
 
         if (conn_tls_start(conn) == 0) {
+            conn_prepare_reset(conn, auth_handle_open);
             conn_open_stream(conn);
         } else {
             /* failed tls spoils the connection, so disconnect */
@@ -562,19 +563,15 @@ static void _auth(xmpp_conn_t * const conn)
 	anonjid = 0;
     }
 
-    if (conn->tls_support)
-    {
+    if (conn->tls_support) {
 	tls_t *tls = tls_new(conn->ctx, conn->sock, conn->certfail_handler, conn->tls_cert_path);
 
 	/* If we couldn't init tls, it isn't there, so go on */
-	if (!tls)
-	{
+	if (!tls) {
 	    conn->tls_support = 0;
 	    _auth(conn);
 	    return;
-	}
-	else
-	{
+	} else {
 	    tls_free(tls);
 	}
 
@@ -1234,4 +1231,17 @@ int _handle_missing_handshake(xmpp_conn_t * const conn, void * const userdata)
     xmpp_error(conn->ctx, "xmpp", "Server did not reply to handshake request.");
     xmpp_disconnect(conn);
     return 0;
+}
+
+void auth_handle_open_raw(xmpp_conn_t * const conn)
+{
+    handler_reset_timed(conn, 0);
+    /* user handlers are not called before authentication is completed. */
+    conn->authenticated = 1;
+    conn->conn_handler(conn, XMPP_CONN_CONNECT, 0, NULL, conn->userdata);
+}
+
+void auth_handle_open_stub(xmpp_conn_t * const conn)
+{
+    xmpp_warn(conn->ctx, "auth", "Stub callback is called.");
 }

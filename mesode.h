@@ -116,7 +116,7 @@ typedef struct _xmpp_ctx_t xmpp_ctx_t;
 
 typedef struct _tlscert_t xmpp_tlscert_t;
 
-xmpp_ctx_t *xmpp_ctx_new(const xmpp_mem_t * const mem, 
+xmpp_ctx_t *xmpp_ctx_new(const xmpp_mem_t * const mem,
 			 const xmpp_log_t * const log);
 void xmpp_ctx_free(xmpp_ctx_t * const ctx);
 
@@ -171,6 +171,7 @@ typedef struct _xmpp_stanza_t xmpp_stanza_t;
 /* connect callback */
 typedef enum {
     XMPP_CONN_CONNECT,
+    XMPP_CONN_RAW_CONNECT,
     XMPP_CONN_DISCONNECT,
     XMPP_CONN_FAIL
 } xmpp_conn_event_t;
@@ -256,6 +257,15 @@ int xmpp_connect_component(xmpp_conn_t * const conn, const char * const server,
                            unsigned short port, xmpp_conn_handler callback,
                            void * const userdata);
 
+int xmpp_connect_raw(xmpp_conn_t * const conn,
+                     const char * const altdomain,
+                     unsigned short altport,
+                     xmpp_certfail_handler certfail_cb,
+                     xmpp_conn_handler callback,
+                     void * const userdata);
+int xmpp_conn_raw_open_stream(xmpp_conn_t * const conn);
+int xmpp_conn_raw_tls_start(xmpp_conn_t * const conn);
+
 void xmpp_disconnect(xmpp_conn_t * const conn);
 
 void xmpp_send(xmpp_conn_t * const conn,
@@ -325,7 +335,7 @@ int xmpp_stanza_is_text(xmpp_stanza_t * const stanza);
 int xmpp_stanza_is_tag(xmpp_stanza_t * const stanza);
 
 /* marshall a stanza into text for transmission or display */
-int xmpp_stanza_to_text(xmpp_stanza_t *stanza, 
+int xmpp_stanza_to_text(xmpp_stanza_t *stanza,
 			char ** const buf, size_t * const buflen);
 
 xmpp_stanza_t *xmpp_stanza_get_children(xmpp_stanza_t * const stanza);
