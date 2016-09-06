@@ -51,7 +51,12 @@
 
 static int _disconnect_cleanup(xmpp_conn_t * const conn,
                                void * const userdata);
-
+static char *_conn_build_stream_tag(xmpp_conn_t * const conn,
+                                    char **attributes, size_t attributes_len);
+static void _conn_attributes_new(xmpp_conn_t *conn, char **attrs,
+                                 char ***attributes, size_t *attributes_len);
+static void _conn_attributes_destroy(xmpp_conn_t *conn, char **attributes,
+                                     size_t attributes_len);
 static void _handle_stream_start(char *name, char **attrs,
                                  void * const userdata);
 static void _handle_stream_end(char *name,
@@ -536,9 +541,8 @@ int xmpp_connect_component(xmpp_conn_t * const conn, const char * const server,
  *  the only required configuration is a domain (or full jid) passed via
  *  xmpp_conn_set_jid().
  *
- *  Next step should be xmpp_conn_raw_open_stream(). In case of legacy SSL,
- *  user might want to call xmpp_conn_raw_tls_start() before opening the
- *  stream.
+ *  Next step should be xmpp_conn_open_stream(). In case of legacy SSL,
+ *  user might want to call xmpp_conn_tls_start() before opening the stream.
  *
  *  @see xmpp_connect_client()
  *
@@ -580,15 +584,18 @@ void conn_established(xmpp_conn_t * const conn)
     }
 }
 
-/** Send an opening stream tag.
+/** Send the default opening stream tag.
+ *  The default tag is the one sent by xmpp_connect_client().
  *  User's connection handler is called with event XMPP_CONN_CONNECT when
  *  server replies with its opening tag.
  *
  *  @return XMPP_EOK (0) on success a number less than 0 on failure
  *
+ *  @note The connection must be connected with xmpp_connect_raw().
+ *
  *  @ingroup Connections
  */
-int xmpp_conn_raw_open_stream(xmpp_conn_t * const conn)
+int xmpp_conn_open_stream_default(xmpp_conn_t * const conn)
 {
     if (!conn->is_raw)
         return XMPP_EINVOP;
@@ -599,11 +606,48 @@ int xmpp_conn_raw_open_stream(xmpp_conn_t * const conn)
     return XMPP_EOK;
 }
 
+/** Send an opening stream tag.
+ *  User's connection handler is called with event XMPP_CONN_CONNECT when
+ *  server replies with its opening tag.
+ *
+ *  @param conn a Strophe connection object
+ *  @param attributes Array of strings in format: even index points to
+ *      an attribute name and odd index points to its value
+ *  @param attributes_len Number of elements in the attributes array, it
+ *      should be number of attributes multiplied by 2
+ *
+ *  @return XMPP_EOK (0) on success a number less than 0 on failure
+ *
+ *  @note The connection must be connected with xmpp_connect_raw().
+ *
+ *  @ingroup Connections
+ */
+int xmpp_conn_open_stream(xmpp_conn_t * const conn, char **attributes,
+                          size_t attributes_len)
+{
+    char *tag;
+
+    if (!conn->is_raw)
+        return XMPP_EINVOP;
+
+    tag = _conn_build_stream_tag(conn, attributes, attributes_len);
+    if (!tag)
+        return XMPP_EMEM;
+
+    conn_prepare_reset(conn, auth_handle_open_raw);
+    xmpp_send_raw_string(conn, "<?xml version=\"1.0\"?>%s", tag);
+    xmpp_free(conn->ctx, tag);
+
+    return XMPP_EOK;
+}
+
 /** Start synchronous TLS handshake with the server.
  *
  *  @return XMPP_EOK (0) on success a number less than 0 on failure
+ *
+ *  @ingroup Connections
  */
-int xmpp_conn_raw_tls_start(xmpp_conn_t * const conn)
+int xmpp_conn_tls_start(xmpp_conn_t * const conn)
 {
     return conn_tls_start(conn);
 }
@@ -657,18 +701,6 @@ void conn_parser_reset(xmpp_conn_t * const conn)
 {
     conn->reset_parser = 0;
     parser_reset(conn->parser);
-}
-
-/* timed handler for cleanup if normal disconnect procedure takes too long */
-static int _disconnect_cleanup(xmpp_conn_t * const conn,
-                               void * const userdata)
-{
-    xmpp_debug(conn->ctx, "xmpp",
-               "disconnection forced by cleanup timeout");
-
-    conn_disconnect(conn);
-
-    return 0;
 }
 
 /** Initiate termination of the connection to the XMPP server.
@@ -1025,34 +1057,111 @@ void xmpp_conn_free_tlscert(xmpp_ctx_t *ctx, struct _tlscert_t *cert)
     xmpp_free(ctx, cert);
 }
 
-static void _log_open_tag(xmpp_conn_t *conn, char **attrs)
+/* timed handler for cleanup if normal disconnect procedure takes too long */
+static int _disconnect_cleanup(xmpp_conn_t * const conn,
+                               void * const userdata)
 {
-    char buf[4096];
-    size_t pos;
-    int len;
-    int i;
-    char *attr;
+    xmpp_debug(conn->ctx, "xmpp",
+               "disconnection forced by cleanup timeout");
 
-    if (!attrs) return;
+    conn_disconnect(conn);
 
-    pos = 0;
-    len = xmpp_snprintf(buf, 4096, "<stream:stream");
-    if (len < 0) return;
+    return 0;
+}
 
-    pos += len;
-    for (i = 0; attrs[i]; i += 2) {
-        attr = parser_attr_name(conn->ctx, attrs[i]);
-        len = xmpp_snprintf(&buf[pos], 4096 - pos, " %s='%s'",
-                            attr, attrs[i+1]);
-        xmpp_free(conn->ctx, attr);
-        if (len < 0) return;
-        pos += len;
+static char *_conn_build_stream_tag(xmpp_conn_t * const conn,
+                                    char **attributes, size_t attributes_len)
+{
+    char *tag;
+    size_t len;
+    size_t i;
+
+    static const char *tag_head = "<stream:stream";
+    static const char *tag_tail = ">";
+
+    /* ignore the last element unless number is even */
+    attributes_len &= ~(size_t)1;
+
+    len = strlen(tag_head) + strlen(tag_tail);
+    for (i = 0; i < attributes_len; ++i)
+        len += strlen(attributes[i]) + 2;
+    tag = xmpp_alloc(conn->ctx, len + 1);
+    if (!tag) return NULL;
+
+    strcpy(tag, tag_head);
+    for (i = 0; i < attributes_len; ++i) {
+        if ((i & 1) == 0) {
+            strcat(tag, " ");
+            strcat(tag, attributes[i]);
+            strcat(tag, "=\"");
+        } else {
+            strcat(tag, attributes[i]);
+            strcat(tag, "\"");
+        }
+    }
+    strcat(tag, tag_tail);
+
+    if (strlen(tag) != len) {
+        xmpp_error(conn->ctx, "xmpp", "Internal error in "
+                              "_conn_build_stream_tag().");
+        xmpp_free(conn->ctx, tag);
+        tag = NULL;
     }
 
-    len = xmpp_snprintf(&buf[pos], 4096 - pos, ">");
-    if (len < 0) return;
+    return tag;
+}
 
-    xmpp_debug(conn->ctx, "xmpp", "RECV: %s", buf);
+static void _conn_attributes_new(xmpp_conn_t *conn, char **attrs,
+                                 char ***attributes, size_t *attributes_len)
+{
+    char **array = NULL;
+    size_t nr = 0;
+    size_t i;
+
+    if (attrs) {
+        for (; attrs[nr]; ++nr);
+        array = xmpp_alloc(conn->ctx, sizeof(*array) * nr);
+        for (i = 0; array && i < nr; ++i) {
+            array[i] = (i & 1) == 0 ? parser_attr_name(conn->ctx, attrs[i])
+                                    : xmpp_strdup(conn->ctx, attrs[i]);
+            if (array[i] == NULL) break;
+        }
+        if (!array || i < nr) {
+            xmpp_error(conn->ctx, "xmpp", "Memory allocation error.");
+            _conn_attributes_destroy(conn, array, i);
+            array = NULL;
+            nr = 0;
+        }
+    }
+    *attributes = array;
+    *attributes_len = nr;
+}
+
+static void _conn_attributes_destroy(xmpp_conn_t *conn, char **attributes,
+                                     size_t attributes_len)
+{
+    size_t i;
+
+    if (attributes) {
+        for (i = 0; i < attributes_len; ++i)
+            xmpp_free(conn->ctx, attributes[i]);
+        xmpp_free(conn->ctx, attributes);
+    }
+}
+
+static void _log_open_tag(xmpp_conn_t *conn, char **attrs)
+{
+    char **attributes;
+    char *tag;
+    size_t nr;
+
+    _conn_attributes_new(conn, attrs, &attributes, &nr);
+    tag = _conn_build_stream_tag(conn, attributes, nr);
+    if (tag) {
+        xmpp_debug(conn->ctx, "xmpp", "RECV: %s", tag);
+        xmpp_free(conn->ctx, tag);
+    }
+    _conn_attributes_destroy(conn, attributes, nr);
 }
 
 static char *_get_stream_attribute(char **attrs, char *name)
@@ -1073,6 +1182,7 @@ static void _handle_stream_start(char *name, char **attrs,
 {
     xmpp_conn_t *conn = (xmpp_conn_t *)userdata;
     char *id;
+    int failed = 0;
 
     if (conn->stream_id) xmpp_free(conn->ctx, conn->stream_id);
     conn->stream_id = NULL;
@@ -1083,17 +1193,17 @@ static void _handle_stream_start(char *name, char **attrs,
         if (id)
             conn->stream_id = xmpp_strdup(conn->ctx, id);
 
-        /* check and log errors */
-        if (!id)
-            xmpp_error(conn->ctx, "conn", "No id attribute.");
-        else if (!conn->stream_id)
+        if (id && !conn->stream_id) {
             xmpp_error(conn->ctx, "conn", "Memory allocation failed.");
+            failed = 1;
+        }
     } else {
         xmpp_error(conn->ctx, "conn", "Server did not open valid stream."
                                       " name = %s.", name);
+        failed = 1;
     }
 
-    if (conn->stream_id) {
+    if (!failed) {
         /* call stream open handler */
         conn->open_handler(conn);
     } else {

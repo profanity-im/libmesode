@@ -14,6 +14,7 @@ AS_CASE([$host_os],
     [netbsd*],     [PLATFORM="bsd"],
     [*nto*|*qnx*], [PLATFORM="qnx"],
     [*solaris*],   [PLATFORM="solaris"],
+    [*android*],   [PLATFORM="android"],
                    [PLATFORM="nix"])
 
 PKG_CHECK_MODULES([expat], [expat >= 2.0.0],
@@ -55,6 +56,7 @@ AS_CASE([$PLATFORM],
     [bsd],     [RESOLV_LIBS=""],
     [qnx],     [RESOLV_LIBS="-lsocket"],
     [solaris], [RESOLV_LIBS="-lresolv -lsocket -lnsl"],
+    [android], [RESOLV_LIBS=""],
                [RESOLV_LIBS="-lresolv"])
 
 LIBS_TMP="${LIBS}"
