@@ -13,7 +13,7 @@ LOCAL_C_INCLUDES := \
 LOCAL_SRC_FILES := \
 	../examples/basic.c
 
-LOCAL_STATIC_LIBRARIES := libstrophe libexpat
+LOCAL_STATIC_LIBRARIES := libmesode libexpat
 
 include $(BUILD_EXECUTABLE)
 
@@ -22,7 +22,7 @@ include $(BUILD_EXECUTABLE)
 #
 
 include $(CLEAR_VARS)
-LOCAL_MODULE := libstrophe
+LOCAL_MODULE := libmesode
 LOCAL_CFLAGS :=
 LOCAL_C_INCLUDES := \
 	$(LOCAL_PATH)/.. \
@@ -52,7 +52,7 @@ LOCAL_SRC_FILES := \
 	../src/util.c \
 	../src/uuid.c
 
-LOCAL_STATIC_LIBRARIES := libstrophe
+LOCAL_STATIC_LIBRARIES := libmesode
 
 include $(BUILD_STATIC_LIBRARY)
 

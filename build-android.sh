@@ -5,7 +5,7 @@ EXPAT_PATH="$DIR/expat"
 EXPAT_FILE='lib/expat.h'
 
 echo
-echo Attention: libstrophe will be built without TLS support. To enable TLS
+echo Attention: libmesode will be built without TLS support. To enable TLS
 echo you need to replace \'src/tls_dummy.c\' with \'src/tls_opnessl.c\' in
 echo \'jni/Android.mk\', add path to the openssl headers and link your program
 echo with libssl and libcrypto.
@@ -35,5 +35,5 @@ echo
 echo "basic example:"
 ls -l "$DIR"/libs/*/basic
 echo
-echo "libstrophe.a:"
-ls -l "$DIR"/obj/local/*/libstrophe.a
+echo "libmesode.a:"
+ls -l "$DIR"/obj/local/*/libmesode.a
