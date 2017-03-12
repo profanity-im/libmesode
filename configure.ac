@@ -18,11 +18,11 @@ AS_CASE([$host_os],
                    [PLATFORM="nix"])
 
 PKG_CHECK_MODULES([expat], [expat >= 2.0.0],
-                  [PC_REQUIRES+=(expat)],
+                  [PC_REQUIRES="expat ${PC_REQUIRES}"],
                   [AC_CHECK_HEADER([expat.h],
                                    [
                                     expat_LIBS="-lexpat"
-                                    PC_LIBS+=($expat_LIBS)
+                                    PC_LIBS="${expat_LIBS} ${PC_LIBS}"
                                    ],
                                    [AC_MSG_ERROR([expat not found; expat required.])]
                                   )
