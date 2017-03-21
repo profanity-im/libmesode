@@ -96,8 +96,8 @@ void xmpp_run_once(xmpp_ctx_t *ctx, const unsigned long timeout)
             ret = tls_clear_pending_write(conn->tls);
 
             if (ret < 0 && !tls_is_recoverable(tls_error(conn->tls))) {
-                /* an error occured */
-                xmpp_debug(ctx, "xmpp", "Send error occured, disconnecting.");
+                /* an error occurred */
+                xmpp_debug(ctx, "xmpp", "Send error occurred, disconnecting.");
                 conn->error = ECONNABORTED;
                 conn_disconnect(conn);
             }
@@ -112,7 +112,7 @@ void xmpp_run_once(xmpp_ctx_t *ctx, const unsigned long timeout)
                 ret = tls_write(conn->tls, &sq->data[sq->written], towrite);
 
                 if (ret < 0 && !tls_is_recoverable(tls_error(conn->tls))) {
-                    /* an error occured */
+                    /* an error occurred */
                     conn->error = tls_error(conn->tls);
                     break;
                 } else if (ret < towrite) {
@@ -125,7 +125,7 @@ void xmpp_run_once(xmpp_ctx_t *ctx, const unsigned long timeout)
                 ret = sock_write(conn->sock, &sq->data[sq->written], towrite);
 
                 if (ret < 0 && !sock_is_recoverable(sock_error())) {
-                    /* an error occured */
+                    /* an error occurred */
                     conn->error = sock_error();
                     break;
                 } else if (ret < towrite) {
@@ -152,7 +152,7 @@ void xmpp_run_once(xmpp_ctx_t *ctx, const unsigned long timeout)
         if (conn->error) {
             /* FIXME: need to tear down send queues and random other things
              * maybe this should be abstracted */
-            xmpp_debug(ctx, "xmpp", "Send error occured, disconnecting.");
+            xmpp_debug(ctx, "xmpp", "Send error occurred, disconnecting.");
             conn->error = ECONNABORTED;
             conn_disconnect(conn);
         }
