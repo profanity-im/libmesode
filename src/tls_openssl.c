@@ -169,15 +169,17 @@ static struct _tlscert_t *_x509_to_tlscert(xmpp_ctx_t *ctx, X509 *cert)
 
     tlscert->keyalg = NULL;
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
-	int alg_nid = OBJ_obj2nid(cert->cert_info->key->algor->algorithm);
+    int alg_nid = OBJ_obj2nid(cert->cert_info->key->algor->algorithm);
 #else
-	X509_PUBKEY *pubkey = X509_get_X509_PUBKEY(cert);
-	ASN1_OBJECT *ppkalg;
-	// FIXME: handle 0 on error.
-	X509_PUBKEY_get0_param(&ppkalg, NULL, NULL, NULL, NULL);
-	int alg_nid = OBJ_obj2nid(ppkalg);
+    X509_PUBKEY *pubkey = X509_get_X509_PUBKEY(cert);
+    ASN1_OBJECT *ppkalg = NULL;
+    int alg_nid = NID_undef;
+    res = X509_PUBKEY_get0_param(&ppkalg, NULL, NULL, NULL, pubkey);
+    if (res) {
+        alg_nid = OBJ_obj2nid(ppkalg);
+    }
 #endif
-	if (alg_nid != NID_undef) {
+    if (alg_nid != NID_undef) {
         const char* keyalg = OBJ_nid2ln(alg_nid);
         if (keyalg) {
             tlscert->keyalg = xmpp_strdup(ctx, keyalg);
@@ -186,13 +188,13 @@ static struct _tlscert_t *_x509_to_tlscert(xmpp_ctx_t *ctx, X509 *cert)
 
     tlscert->sigalg = NULL;
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
-	alg_nid = OBJ_obj2nid(cert->sig_alg->algorithm);
+    alg_nid = OBJ_obj2nid(cert->sig_alg->algorithm);
 #else
-	const X509_ALGOR *palg;
-	X509_get0_signature(NULL, &palg, cert);
-	alg_nid = OBJ_obj2nid(palg->algorithm);
+    const X509_ALGOR *palg;
+    X509_get0_signature(NULL, &palg, cert);
+    alg_nid = OBJ_obj2nid(palg->algorithm);
 #endif
-	if (alg_nid != NID_undef) {
+    if (alg_nid != NID_undef) {
         const char* sigalg = OBJ_nid2ln(alg_nid);
         if (sigalg) {
             tlscert->sigalg = xmpp_strdup(ctx, sigalg);
