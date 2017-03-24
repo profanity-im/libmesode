@@ -205,7 +205,7 @@ static struct _tlscert_t *_x509_to_tlscert(xmpp_ctx_t *ctx, X509 *cert)
 static int
 verify_callback(int preverify_ok, X509_STORE_CTX *x509_ctx)
 {
-    const STACK_OF(X509) *sk = X509_STORE_CTX_get1_chain(x509_ctx);
+    STACK_OF(X509) *sk = X509_STORE_CTX_get1_chain(x509_ctx);
     int slen = sk_X509_num(sk);
     unsigned i;
     X509 *certsk;
