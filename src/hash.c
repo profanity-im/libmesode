@@ -106,18 +106,35 @@ void hash_release(hash_t * const table)
 /** hash a key for our table lookup */
 static int _hash_key(hash_t *table, const char *key)
 {
-   int hash = 0;
-   int shift = 0;
-   const char *c = key;
+   unsigned hash = 0;
+   unsigned shift = 0;
+   const unsigned char *c = (const unsigned char *)key;
 
-   while (*c != '\0') {
+   while (*c != 0) {
 	/* assume 32 bit ints */
-	hash ^= ((int)*c++ << shift);
+	hash ^= ((unsigned)*c++ << shift);
 	shift += 8;
 	if (shift > 24) shift = 0;
    }
+   return hash % (unsigned)table->length;
+}
 
-   return hash % table->length;
+hashentry_t *_hash_entry_find(hash_t *table, const char *key)
+{
+   hashentry_t *entry;
+   int table_index = _hash_key(table, key);
+
+   /* look up the hash entry */
+   entry = table->entries[table_index];
+   while (entry != NULL) {
+	/* traverse the linked list looking for the key */
+	if (!strcmp(key, entry->key)) {
+	  /* match */
+          break;
+	}
+	entry = entry->next;
+   }
+   return entry;
 }
 
 /** add a key, value pair to a hash table.
@@ -130,23 +147,25 @@ int hash_add(hash_t *table, const char * const key, void *data)
    hashentry_t *entry = NULL;
    int table_index = _hash_key(table, key);
 
-   /* drop existing entry, if any */
-   hash_drop(table, key);
+   /* find and replace existing entry, if any */
+   entry = _hash_entry_find(table, key);
 
-   /* allocate and fill a new entry */
-   entry = xmpp_alloc(ctx, sizeof(hashentry_t));
-   if (!entry) return -1;
-   entry->key = xmpp_strdup(ctx, key);
-   if (!entry->key) {
-       xmpp_free(ctx, entry);
-       return -1;
+   if (entry == NULL) {
+      /* allocate and fill a new entry */
+      entry = xmpp_alloc(ctx, sizeof(hashentry_t));
+      if (!entry) return -1;
+      entry->key = xmpp_strdup(ctx, key);
+      if (!entry->key) {
+         xmpp_free(ctx, entry);
+         return -1;
+      }
+      /* insert ourselves in the linked list */
+      entry->next = table->entries[table_index];
+      table->entries[table_index] = entry;
+      table->num_keys++;
    }
+
    entry->value = data;
-   /* insert ourselves in the linked list */
-   /* TODO: this leaks duplicate keys */
-   entry->next = table->entries[table_index];
-   table->entries[table_index] = entry;
-   table->num_keys++;
 
    return 0;
 }
@@ -155,22 +174,9 @@ int hash_add(hash_t *table, const char * const key, void *data)
 void *hash_get(hash_t *table, const char *key)
 {
    hashentry_t *entry;
-   int table_index = _hash_key(table, key);
-   void *result = NULL;
 
-   /* look up the hash entry */
-   entry = table->entries[table_index];
-   while (entry != NULL) {
-	/* traverse the linked list looking for the key */
-	if (!strcmp(key, entry->key)) {
-	  /* match */
-	  result = entry->value;
-	  return result;
-	}
-	entry = entry->next;
-   }
-   /* no match */
-   return result;
+   entry = _hash_entry_find(table, key);
+   return entry == NULL ? NULL : entry->value;
 }
 
 /** delete a key from a hash table */
@@ -235,7 +241,7 @@ void hash_iter_release(hash_iterator_t *iter)
 
     iter->ref--;
 
-    if (iter->ref <= 0) {
+    if (iter->ref == 0) { // ref is unsigned!!!
 	hash_release(iter->table);
 	xmpp_free(ctx, iter);
     }
@@ -273,4 +279,3 @@ const char * hash_iter_next(hash_iterator_t *iter)
     iter->entry = entry;
     return entry->key;
 }
-

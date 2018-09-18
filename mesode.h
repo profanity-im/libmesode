@@ -167,6 +167,10 @@ typedef struct _xmpp_stanza_t xmpp_stanza_t;
 #define XMPP_CONN_FLAG_DISABLE_TLS   (1UL << 0)
 #define XMPP_CONN_FLAG_MANDATORY_TLS (1UL << 1)
 #define XMPP_CONN_FLAG_LEGACY_SSL    (1UL << 2)
+/** @def XMPP_CONN_FLAG_TRUST_TLS
+ *  Trust server's certificate even if it is invalid.
+ */
+#define XMPP_CONN_FLAG_TRUST_TLS     (1UL << 3)
 
 /* connect callback */
 typedef enum {
@@ -216,7 +220,7 @@ typedef void (*xmpp_conn_handler)(xmpp_conn_t * const conn,
 				  void * const userdata);
 
 typedef int (*xmpp_certfail_handler)(xmpp_tlscert_t *cert, const char * const errormsg);
-
+void xmpp_send_error(xmpp_conn_t * const conn, xmpp_error_type_t const type, char * const text);
 xmpp_conn_t *xmpp_conn_new(xmpp_ctx_t * const ctx);
 xmpp_conn_t *xmpp_conn_clone(xmpp_conn_t * const conn);
 int xmpp_conn_release(xmpp_conn_t * const conn);
@@ -396,6 +400,8 @@ int xmpp_message_set_body(xmpp_stanza_t *msg, const char * const text);
 xmpp_stanza_t *xmpp_iq_new(xmpp_ctx_t *ctx, const char * const type,
                            const char * const id);
 xmpp_stanza_t *xmpp_presence_new(xmpp_ctx_t *ctx);
+xmpp_stanza_t *xmpp_error_new(xmpp_ctx_t *ctx, xmpp_error_type_t const type,
+                              const char * const text);
 
 /* jid */
 
@@ -413,6 +419,7 @@ char *xmpp_jid_resource(xmpp_ctx_t *ctx, const char *jid);
 void xmpp_run_once(xmpp_ctx_t *ctx, const unsigned long  timeout);
 void xmpp_run(xmpp_ctx_t *ctx);
 void xmpp_stop(xmpp_ctx_t *ctx);
+void xmpp_ctx_set_timeout(xmpp_ctx_t * const ctx, const unsigned long timeout);
 
 /* UUID */
 
@@ -428,6 +435,8 @@ char *xmpp_uuid_gen(xmpp_ctx_t *ctx);
 typedef struct _xmpp_sha1_t xmpp_sha1_t;
 
 char *xmpp_sha1(xmpp_ctx_t *ctx, const unsigned char *data, size_t len);
+void xmpp_sha1_digest(const unsigned char *data, size_t len,
+                      unsigned char *digest);
 
 xmpp_sha1_t *xmpp_sha1_new(xmpp_ctx_t *ctx);
 void xmpp_sha1_free(xmpp_sha1_t *sha1);

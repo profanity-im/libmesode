@@ -20,6 +20,8 @@
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <openssl/opensslv.h>
+#include <openssl/x509v3.h>
 
 #include "common.h"
 #include "tls.h"
@@ -45,13 +47,34 @@ static void _tls_log_error(xmpp_ctx_t *ctx);
 
 void tls_initialize(void)
 {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
     SSL_library_init();
     SSL_load_error_strings();
+#else
+    OPENSSL_init_ssl(OPENSSL_INIT_LOAD_SSL_STRINGS, NULL);
+#endif
 }
 
 void tls_shutdown(void)
 {
-    return;
+    /*
+     * FIXME: Don't free global tables, program or other libraries may use
+     * openssl after libstrophe finalization. Maybe better leak some fixed
+     * memory rather than cause random crashes of the main program.
+     */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    ERR_free_strings();
+    EVP_cleanup();
+    CRYPTO_cleanup_all_ex_data();
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+    SSL_COMP_free_compression_methods();
+#endif
+#if OPENSSL_VERSION_NUMBER < 0x10000000L
+    ERR_remove_state(0);
+#else
+    ERR_remove_thread_state(NULL);
+#endif
+#endif
 }
 
 int tls_error(tls_t *tls)
@@ -209,7 +232,7 @@ verify_callback(int preverify_ok, X509_STORE_CTX *x509_ctx)
 {
     STACK_OF(X509) *sk = X509_STORE_CTX_get1_chain(x509_ctx);
     int slen = sk_X509_num(sk);
-    unsigned i;
+    int i;
     X509 *certsk;
     xmpp_debug(_xmppctx, "TLS", "STACK");
     for(i=0; i<slen; i++) {
@@ -263,37 +286,65 @@ struct _tlscert_t *tls_peer_cert(xmpp_conn_t *conn)
     }
 }
 
-tls_t *tls_new(xmpp_ctx_t *ctx, sock_t sock, xmpp_certfail_handler certfail_handler, char *tls_cert_path)
+//tls_t *tls_new(xmpp_ctx_t *ctx, sock_t sock, xmpp_certfail_handler certfail_handler, char *tls_cert_path)
+tls_t *tls_new(xmpp_conn_t *conn)
 {
-    _xmppctx = ctx;
-    _certfail_handler = certfail_handler;
+    _xmppctx = conn->ctx;
+    _certfail_handler = conn->certfail_handler;
     _cert_handled = 0;
     _last_cb_res = 0;
-    tls_t *tls = xmpp_alloc(ctx, sizeof(*tls));
+    tls_t *tls = xmpp_alloc(conn->ctx, sizeof(*tls));
+    int mode;
 
-    xmpp_debug(ctx, "TLS", "OpenSSL version: %s", SSLeay_version(SSLEAY_VERSION));
+    xmpp_debug(conn->ctx, "TLS", "OpenSSL version: %s", SSLeay_version(SSLEAY_VERSION));
 
     if (tls) {
         int ret;
         memset(tls, 0, sizeof(*tls));
 
-        tls->ctx = ctx;
-        tls->sock = sock;
+        tls->ctx = conn->ctx;
+        tls->sock = conn->sock;
         tls->ssl_ctx = SSL_CTX_new(SSLv23_client_method());
         if (tls->ssl_ctx == NULL)
             goto err;
 
+        /* Enable bug workarounds. */
+        SSL_CTX_set_options(tls->ssl_ctx, SSL_OP_ALL);
+
+        /* Disable insecure SSL/TLS versions. */
+        SSL_CTX_set_options(tls->ssl_ctx, SSL_OP_NO_SSLv2); /* DROWN */
+        SSL_CTX_set_options(tls->ssl_ctx, SSL_OP_NO_SSLv3); /* POODLE */
+        SSL_CTX_set_options(tls->ssl_ctx, SSL_OP_NO_TLSv1); /* BEAST */
+
         SSL_CTX_set_client_cert_cb(tls->ssl_ctx, NULL);
         SSL_CTX_set_mode(tls->ssl_ctx, SSL_MODE_ENABLE_PARTIAL_WRITE);
         SSL_CTX_set_verify(tls->ssl_ctx, SSL_VERIFY_PEER, verify_callback);
-        if (tls_cert_path) {
-            SSL_CTX_load_verify_locations(tls->ssl_ctx, NULL, tls_cert_path);
+        if (conn->tls_cert_path) {
+            SSL_CTX_load_verify_locations(tls->ssl_ctx, NULL, conn->tls_cert_path);
         }
+
         tls->ssl = SSL_new(tls->ssl_ctx);
         if (tls->ssl == NULL)
             goto err_free_ctx;
 
-        ret = SSL_set_fd(tls->ssl, sock);
+        /* Trust server's certificate when user sets the flag explicitly. */
+        mode = conn->tls_trust ? SSL_VERIFY_NONE : SSL_VERIFY_PEER;
+        SSL_set_verify(tls->ssl, mode, 0);
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+        /* Hostname verification is supported in OpenSSL 1.0.2 and newer. */
+        X509_VERIFY_PARAM *param = SSL_get0_param(tls->ssl);
+
+        /*
+         * Allow only complete wildcards.  RFC 6125 discourages wildcard usage
+         * completely, and lists internationalized domain names as a reason
+         * against partial wildcards.
+         * See https://tools.ietf.org/html/rfc6125#section-7.2 for more information.
+         */
+        X509_VERIFY_PARAM_set_hostflags(param, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+        X509_VERIFY_PARAM_set1_host(param, conn->domain, 0);
+#endif
+
+        ret = SSL_set_fd(tls->ssl, conn->sock);
         if (ret <= 0)
             goto err_free_ssl;
     }
@@ -305,8 +356,8 @@ err_free_ssl:
 err_free_ctx:
     SSL_CTX_free(tls->ssl_ctx);
 err:
-    xmpp_free(ctx, tls);
-    _tls_log_error(ctx);
+    xmpp_free(conn->ctx, tls);
+    _tls_log_error(conn->ctx);
     return NULL;
 }
 
@@ -326,6 +377,7 @@ int tls_start(tls_t *tls)
 {
     int error;
     int ret;
+    long x509_res;
 
     /* Since we're non-blocking, loop the connect call until it
        succeeds or fails */
@@ -342,8 +394,12 @@ int tls_start(tls_t *tls)
         /* success or fatal error */
         break;
     }
-    _tls_set_error(tls, error);
 
+    x509_res = SSL_get_verify_result(tls->ssl);
+    xmpp_debug(tls->ctx, "tls", "Certificate verification %s",
+               x509_res == X509_V_OK ? "passed" : "FAILED");
+
+    _tls_set_error(tls, error);
     return ret <= 0 ? 0 : 1;
 }
 
@@ -362,6 +418,14 @@ int tls_stop(tls_t *tls)
             break;
         }
         _tls_sock_wait(tls, error);
+    }
+    if (error == SSL_ERROR_SYSCALL && errno == 0) {
+        /*
+         * Handle special case when peer closes connection instead of
+         * proper shutdown.
+         */
+        error = 0;
+        ret = 1;
     }
     _tls_set_error(tls, error);
 
@@ -414,6 +478,8 @@ static void _tls_sock_wait(tls_t *tls, int error)
     int nfds;
     int ret;
 
+    if (error == SSL_ERROR_NONE) return;
+
     FD_ZERO(&rfds);
     FD_ZERO(&wfds);
     if (error == SSL_ERROR_WANT_READ)
@@ -432,6 +498,7 @@ static void _tls_sock_wait(tls_t *tls, int error)
 static void _tls_set_error(tls_t *tls, int error)
 {
     if (error != 0 && !tls_is_recoverable(error)) {
+        xmpp_debug(tls->ctx, "tls", "error=%d errno=%d", error, errno);
         _tls_log_error(tls->ctx);
     }
     tls->lasterror = error;

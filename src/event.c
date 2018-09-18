@@ -43,14 +43,6 @@
 #include "common.h"
 #include "parser.h"
 
-#ifndef DEFAULT_TIMEOUT
-/** @def DEFAULT_TIMEOUT
- *  The default timeout in milliseconds for the event loop.
- *  This is set to 1 millisecond.
- */
-#define DEFAULT_TIMEOUT 1
-#endif
-
 /** Run the event loop once.
  *  This function will run send any data that has been queued by
  *  xmpp_send and related functions and run through the Strophe even
@@ -110,30 +102,17 @@ void xmpp_run_once(xmpp_ctx_t *ctx, const unsigned long timeout)
 
             if (conn->tls) {
                 ret = tls_write(conn->tls, &sq->data[sq->written], towrite);
-
-                if (ret < 0 && !tls_is_recoverable(tls_error(conn->tls))) {
-                    /* an error occurred */
+                if (ret < 0 && !tls_is_recoverable(tls_error(conn->tls)))
                     conn->error = tls_error(conn->tls);
-                    break;
-                } else if (ret < towrite) {
-                    /* not all data could be sent now */
-                    if (ret >= 0) sq->written += ret;
-                    break;
-                }
-
             } else {
                 ret = sock_write(conn->sock, &sq->data[sq->written], towrite);
-
-                if (ret < 0 && !sock_is_recoverable(sock_error())) {
-                    /* an error occurred */
+                if (ret < 0 && !sock_is_recoverable(sock_error()))
                     conn->error = sock_error();
-                    break;
-                } else if (ret < towrite) {
-                    /* not all data could be sent now */
-                    if (ret >= 0) sq->written += ret;
-                    break;
-                }
             }
+            if (ret > 0 && ret < towrite)
+                sq->written += ret; /* not all data could be sent now */
+            if (ret != towrite)
+                break; /* partial write or an error */
 
             /* all data for this queue item written, delete and move on */
             xmpp_free(ctx, sq->data);
@@ -167,9 +146,8 @@ void xmpp_run_once(xmpp_ctx_t *ctx, const unsigned long timeout)
     }
 
 
-    /* fire any ready timed handlers, then
-       make sure we don't wait past the time when timed handlers need
-       to be called */
+    /* fire any ready timed handlers, then make sure we don't wait past
+       the time when timed handlers need to be called */
     next = handler_fire_timed(ctx);
 
     usec = ((next < timeout) ? next : timeout) * 1000;
@@ -201,6 +179,8 @@ void xmpp_run_once(xmpp_ctx_t *ctx, const unsigned long timeout)
             break;
         case XMPP_STATE_CONNECTED:
             FD_SET(conn->sock, &rfds);
+            if (conn->send_queue_len > 0)
+                FD_SET(conn->sock, &wfds);
             break;
         case XMPP_STATE_DISCONNECTED:
             /* do nothing */
@@ -209,9 +189,8 @@ void xmpp_run_once(xmpp_ctx_t *ctx, const unsigned long timeout)
         }
 
         /* Check if there is something in the SSL buffer. */
-        if (conn->tls) {
+        if (conn->tls)
             tls_read_bytes += tls_pending(conn->tls);
-        }
 
         if (conn->state != XMPP_STATE_DISCONNECTED && conn->sock > max)
             max = conn->sock;
@@ -275,15 +254,12 @@ void xmpp_run_once(xmpp_ctx_t *ctx, const unsigned long timeout)
                 if (ret > 0) {
                     ret = parser_feed(conn->parser, buf, ret);
                     if (!ret) {
-                        /* parse error, we need to shut down */
-                        /* FIXME */
-                        xmpp_debug(ctx, "xmpp", "parse error, disconnecting");
-                        conn_disconnect(conn);
+                        xmpp_debug(ctx, "xmpp", "parse error [%s]", buf);
+                        xmpp_send_error(conn, XMPP_SE_INVALID_XML, "parse error");
                     }
                 } else {
                     if (conn->tls) {
-                        if (!tls_is_recoverable(tls_error(conn->tls)))
-                        {
+                        if (!tls_is_recoverable(tls_error(conn->tls))) {
                             xmpp_debug(ctx, "xmpp", "Unrecoverable TLS error, %d.", tls_error(conn->tls));
                             conn->error = tls_error(conn->tls);
                             conn_disconnect(conn);
@@ -325,7 +301,7 @@ void xmpp_run(xmpp_ctx_t *ctx)
 
     ctx->loop_status = XMPP_LOOP_RUNNING;
     while (ctx->loop_status == XMPP_LOOP_RUNNING) {
-        xmpp_run_once(ctx, DEFAULT_TIMEOUT);
+        xmpp_run_once(ctx, ctx->timeout);
     }
 
     /* make it possible to start event loop again */

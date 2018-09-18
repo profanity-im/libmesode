@@ -61,7 +61,7 @@ static char *digest_to_string_alloc(xmpp_ctx_t *ctx, const uint8_t *digest)
     return s;
 }
 
-/** Compute SHA1 message digest
+/** Compute SHA1 message digest.
  *  Returns an allocated string which represents SHA1 message digest in
  *  hexadecimal notation. The string must be freed with xmpp_free().
  *
@@ -81,9 +81,37 @@ char *xmpp_sha1(xmpp_ctx_t *ctx, const unsigned char *data, size_t len)
     return digest_to_string_alloc(ctx, digest);
 }
 
-/** Create new SHA1 object
+/** Compute SHA1 message digest.
+ *  Stores digest in user's buffer which must be at least XMPP_SHA1_DIGEST_SIZE
+ *  bytes long.
  *
- *  @param ctx a Strophe context onject
+ *  @param data buffer for digest computation
+ *  @param len size of the data buffer
+ *  @param digest output buffer of XMPP_SHA1_DIGEST_SIZE bytes
+ *
+ *  @ingroup Digests
+ */
+void xmpp_sha1_digest(const unsigned char *data, size_t len,
+                      unsigned char *digest)
+{
+    crypto_SHA1((const uint8_t *)data, len, digest);
+}
+
+/** Create new SHA1 object.
+ *  SHA1 object is used to compute SHA1 digest of a buffer that is split
+ *  in multiple chunks or provided in stream mode. A single buffer can be
+ *  processed by short functions xmpp_sha1() and xmpp_sha1_digest().
+ *  Follow the next use-case for xmpp_sha1_t object:
+ *  @code
+ *      xmpp_sha1_t *sha1 = xmpp_sha1_new(ctx);
+ *      // Repeat update for all chunks of data
+ *      xmpp_sha1_update(sha1, data, len);
+ *      xmpp_sha1_final(sha1);
+ *      char *digest = xmpp_sha1_to_string_alloc(sha1);
+ *      xmpp_sha1_free(sha1);
+ *  @endcode
+ *
+ *  @param ctx a Strophe context object
  *
  *  @return new SHA1 object
  *
@@ -102,7 +130,7 @@ xmpp_sha1_t *xmpp_sha1_new(xmpp_ctx_t *ctx)
     return sha1;
 }
 
-/** Destroy SHA1 object
+/** Destroy SHA1 object.
  *
  *  @param sha1 a SHA1 object
  *
@@ -113,7 +141,7 @@ void xmpp_sha1_free(xmpp_sha1_t *sha1)
     xmpp_free(sha1->xmpp_ctx, sha1);
 }
 
-/** Update SHA1 context with the next portion of data
+/** Update SHA1 context with the next portion of data.
  *  Can be called repeatedly.
  *
  *  @param sha1 a SHA1 object
@@ -127,7 +155,7 @@ void xmpp_sha1_update(xmpp_sha1_t *sha1, const unsigned char *data, size_t len)
     crypto_SHA1_Update(&sha1->ctx, data, len);
 }
 
-/** Finish SHA1 computation
+/** Finish SHA1 computation.
  *  Don't call xmpp_sha1_update() after this function. Retrieve resulting
  *  message digest with xmpp_sha1_to_string() or xmpp_sha1_to_digest().
  *
@@ -140,7 +168,7 @@ void xmpp_sha1_final(xmpp_sha1_t *sha1)
     crypto_SHA1_Final(&sha1->ctx, sha1->digest);
 }
 
-/** Return message digest rendered as a string
+/** Return message digest rendered as a string.
  *  Stores the string to a user's buffer and returns the buffer. Call this
  *  function after xmpp_sha1_final().
  *
@@ -157,7 +185,7 @@ char *xmpp_sha1_to_string(xmpp_sha1_t *sha1, char *s, size_t slen)
     return digest_to_string(sha1->digest, s, slen);
 }
 
-/** Return message digest rendered as a string
+/** Return message digest rendered as a string.
  *  Returns an allocated string. Free the string using the Strophe context
  *  which is passed to xmpp_sha1_new(). Call this function after
  *  xmpp_sha1_final().
@@ -173,7 +201,7 @@ char *xmpp_sha1_to_string_alloc(xmpp_sha1_t *sha1)
     return digest_to_string_alloc(sha1->xmpp_ctx, sha1->digest);
 }
 
-/** Stores message digest to a user's buffer
+/** Stores message digest to a user's buffer.
  *
  *  @param sha1 a SHA1 object
  *  @param digest output buffer of XMPP_SHA1_DIGEST_SIZE bytes
@@ -391,7 +419,7 @@ _base64_error:
     *outlen = 0;
 }
 
-/** Base64 encoding routine
+/** Base64 encoding routine.
  *  Returns an allocated string which must be freed with xmpp_free().
  *
  *  @param ctx a Strophe context
@@ -407,7 +435,7 @@ char *xmpp_base64_encode(xmpp_ctx_t *ctx, const unsigned char *data, size_t len)
     return base64_encode(ctx, data, len);
 }
 
-/** Base64 decoding routine
+/** Base64 decoding routine.
  *  Returns an allocated string which must be freed with xmpp_free(). User
  *  calls this function when the result must be a string. When decoded buffer
  *  contains '\0' NULL is returned.
@@ -443,7 +471,7 @@ char *xmpp_base64_decode_str(xmpp_ctx_t *ctx, const char *base64, size_t len)
     return (char *)buf;
 }
 
-/** Base64 decoding routine
+/** Base64 decoding routine.
  *  Returns an allocated buffer which must be freed with xmpp_free().
  *
  *  @param ctx a Strophe context

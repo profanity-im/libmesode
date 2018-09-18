@@ -318,4 +318,3 @@ void resolver_srv_free(xmpp_ctx_t *ctx, resolver_srv_rr_t *srv_rr_list)
         srv_rr_list = rr;
     }
 }
-

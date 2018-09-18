@@ -73,15 +73,19 @@ int version_handler(xmpp_conn_t * const conn, xmpp_stanza_t * const stanza, void
 int message_handler(xmpp_conn_t * const conn, xmpp_stanza_t * const stanza, void * const userdata)
 {
     xmpp_ctx_t *ctx = (xmpp_ctx_t*)userdata;
-    xmpp_stanza_t *reply;
+    xmpp_stanza_t *body, *reply;
+    const char *type;
     char *intext, *replytext;
+    int quit = 0;
 
-    if (!xmpp_stanza_get_child_by_name(stanza, "body"))
+    body = xmpp_stanza_get_child_by_name(stanza, "body");
+    if (body == NULL)
         return 1;
-    if (xmpp_stanza_get_type(stanza) != NULL && !strcmp(xmpp_stanza_get_type(stanza), "error"))
+    type = xmpp_stanza_get_type(stanza);
+    if (type != NULL && strcmp(type, "error") == 0)
         return 1;
 
-    intext = xmpp_stanza_get_text(xmpp_stanza_get_child_by_name(stanza, "body"));
+    intext = xmpp_stanza_get_text(body);
 
     printf("Incoming message from %s: %s\n", xmpp_stanza_get_from(stanza), intext);
 
@@ -89,15 +93,24 @@ int message_handler(xmpp_conn_t * const conn, xmpp_stanza_t * const stanza, void
     if (xmpp_stanza_get_type(reply) == NULL)
         xmpp_stanza_set_type(reply, "chat");
 
-    replytext = (char *) malloc(strlen(" to you too!") + strlen(intext) + 1);
-    strcpy(replytext, intext);
-    strcat(replytext, " to you too!");
+    if (strcmp(intext, "quit") == 0) {
+        replytext = strdup("bye!");
+        quit = 1;
+    } else {
+        replytext = (char *) malloc(strlen(" to you too!") + strlen(intext) + 1);
+        strcpy(replytext, intext);
+        strcat(replytext, " to you too!");
+    }
     xmpp_free(ctx, intext);
     xmpp_message_set_body(reply, replytext);
 
     xmpp_send(conn, reply);
     xmpp_stanza_release(reply);
     free(replytext);
+
+    if (quit)
+        xmpp_disconnect(conn);
+
     return 1;
 }
 

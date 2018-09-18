@@ -50,6 +50,8 @@ struct _xmpp_ctx_t {
     xmpp_rand_t *rand;
     xmpp_loop_status_t loop_status;
     xmpp_connlist_t *connlist;
+
+    unsigned long timeout;
 };
 
 /* convenience functions for accessing the context */
@@ -104,7 +106,7 @@ typedef struct _xmpp_handlist_t xmpp_handlist_t;
 struct _xmpp_handlist_t {
     /* common members */
     int user_handler;
-    void *handler;
+    int (*handler)();
     void *userdata;
     int enabled; /* handlers are added disabled and enabled after the
                   * handler chain is processed to prevent stanzas from
@@ -166,6 +168,7 @@ struct _xmpp_conn_t {
     char *tls_cert_path;
     int tls_mandatory;
     int tls_legacy_ssl;
+    int tls_trust;
     int tls_failed; /* set when tls fails, so we don't try again */
     int sasl_support; /* if true, field is a bitfield of supported 
                          mechanisms */
@@ -265,6 +268,7 @@ void handler_add(xmpp_conn_t * const conn,
                  const char * const name,
                  const char * const type,
                  void * const userdata);
+void handler_system_delete_all(xmpp_conn_t *conn);
 
 /* utility functions */
 void disconnect_mem_error(xmpp_conn_t * const conn);

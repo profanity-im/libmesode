@@ -36,7 +36,7 @@ struct _tlscert_t {
 void tls_initialize(void);
 void tls_shutdown(void);
 
-tls_t *tls_new(xmpp_ctx_t *ctx, sock_t sock, xmpp_certfail_handler certfail_handler, char *tls_cert_path);
+tls_t *tls_new(xmpp_conn_t *conn);
 void tls_free(tls_t *tls);
 
 xmpp_tlscert_t* tls_peer_cert(xmpp_conn_t *conn);
