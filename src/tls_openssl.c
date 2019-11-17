@@ -126,49 +126,69 @@ static void _print_certificate(X509* cert) {
 
 static struct _tlscert_t *_x509_to_tlscert(xmpp_ctx_t *ctx, X509 *cert)
 {
+	struct _tlscert_t *tlscert;
+	X509_NAME *subject;
+	char *subjectline;
+	X509_NAME *issuer;
+	char *issuerline;
+	ASN1_TIME *notbefore;
+	char notbefore_str[128];
+	ASN1_TIME *notafter;
+	char notafter_str[128];
+	int res;
+	const EVP_MD *digest;
+	unsigned char buf[20];
+	unsigned len;
+	int rc;
+	ASN1_INTEGER *serial = X509_get_serialNumber(cert);
+	BIGNUM *bn = ASN1_INTEGER_to_BN(serial, NULL);
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    int alg_nid;
+#else
+    X509_PUBKEY *pubkey;
+    ASN1_OBJECT *ppkalg;
+    int alg_nid;
+#endif
+
     if (!cert) {
         return NULL;
     }
 
-    struct _tlscert_t *tlscert = xmpp_alloc(ctx, sizeof(*tlscert));
+    tlscert = xmpp_alloc(ctx, sizeof(*tlscert));
 
     tlscert->subjectname = NULL;
-    X509_NAME *subject = X509_get_subject_name(cert);
-    char *subjectline = X509_NAME_oneline(subject, NULL, 0);
+    subject = X509_get_subject_name(cert);
+    subjectline = X509_NAME_oneline(subject, NULL, 0);
     if (subjectline) {
         tlscert->subjectname = xmpp_strdup(ctx, subjectline);
         OPENSSL_free(subjectline);
     }
 
     tlscert->issuername = NULL;
-    X509_NAME *issuer = X509_get_issuer_name(cert);
-    char *issuerline = X509_NAME_oneline(issuer, NULL, 0);
+    issuer = X509_get_issuer_name(cert);
+    issuerline = X509_NAME_oneline(issuer, NULL, 0);
     if (issuerline) {
         tlscert->issuername = xmpp_strdup(ctx, issuerline);
         OPENSSL_free(issuerline);
     }
 
     tlscert->notbefore = NULL;
-    ASN1_TIME *notbefore = X509_get_notBefore(cert);
-    char notbefore_str[128];
-    int res = convert_ASN1TIME(notbefore, notbefore_str, 128);
+    notbefore = X509_get_notBefore(cert);
+    res = convert_ASN1TIME(notbefore, notbefore_str, 128);
     if (res) {
         tlscert->notbefore = xmpp_strdup(ctx, notbefore_str);
     }
 
     tlscert->notafter = NULL;
-    ASN1_TIME *notafter = X509_get_notAfter(cert);
-    char notafter_str[128];
+    notafter = X509_get_notAfter(cert);
     res = convert_ASN1TIME(notafter, notafter_str, 128);
     if (res) {
         tlscert->notafter = xmpp_strdup(ctx, notafter_str);
     }
 
     tlscert->fingerprint = NULL;
-    const EVP_MD *digest = EVP_sha1();
-    unsigned char buf[20];
-    unsigned len;
-    int rc = X509_digest(cert, digest, (unsigned char*) buf, &len);
+    digest = EVP_sha1();
+    rc = X509_digest(cert, digest, (unsigned char*) buf, &len);
     if (rc != 0 && len == 20) {
         char fingerprint[2*20+1];
         _hex_encode(buf, fingerprint, 20);
@@ -178,8 +198,8 @@ static struct _tlscert_t *_x509_to_tlscert(xmpp_ctx_t *ctx, X509 *cert)
     tlscert->version = ((int) X509_get_version(cert)) + 1;
 
     tlscert->serialnumber = NULL;
-	ASN1_INTEGER *serial = X509_get_serialNumber(cert);
-	BIGNUM *bn = ASN1_INTEGER_to_BN(serial, NULL);
+	serial = X509_get_serialNumber(cert);
+	bn = ASN1_INTEGER_to_BN(serial, NULL);
 	if (bn) {
         char *serialnumber = BN_bn2dec(bn);
         if (serialnumber) {
@@ -193,11 +213,11 @@ static struct _tlscert_t *_x509_to_tlscert(xmpp_ctx_t *ctx, X509 *cert)
 
     tlscert->keyalg = NULL;
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
-    int alg_nid = OBJ_obj2nid(cert->cert_info->key->algor->algorithm);
+    alg_nid = OBJ_obj2nid(cert->cert_info->key->algor->algorithm);
 #else
-    X509_PUBKEY *pubkey = X509_get_X509_PUBKEY(cert);
-    ASN1_OBJECT *ppkalg = NULL;
-    int alg_nid = NID_undef;
+    pubkey = X509_get_X509_PUBKEY(cert);
+    ppkalg = NULL;
+    alg_nid = NID_undef;
     res = X509_PUBKEY_get0_param(&ppkalg, NULL, NULL, NULL, pubkey);
     if (res) {
         alg_nid = OBJ_obj2nid(ppkalg);
@@ -254,11 +274,14 @@ verify_callback(int preverify_ok, X509_STORE_CTX *x509_ctx)
     } else {
         int err = X509_STORE_CTX_get_error(x509_ctx);
         const char *errstr = X509_verify_cert_error_string(err);
+        X509 *user_cert;
+        struct _tlscert_t *tlscert;
+        int cb_res;
         xmpp_debug(_xmppctx, "TLS", "ERROR: %s", errstr);
 
-        X509 *user_cert = sk_X509_value(sk, 0);
-        struct _tlscert_t *tlscert = _x509_to_tlscert(_xmppctx, user_cert);
-        int cb_res = 0;
+        user_cert = sk_X509_value(sk, 0);
+        tlscert = _x509_to_tlscert(_xmppctx, user_cert);
+        cb_res = 0;
         if (_certfail_handler) {
             cb_res = _certfail_handler(tlscert, errstr);
         }
@@ -290,17 +313,22 @@ struct _tlscert_t *tls_peer_cert(xmpp_conn_t *conn)
 //tls_t *tls_new(xmpp_ctx_t *ctx, sock_t sock, xmpp_certfail_handler certfail_handler, char *tls_cert_path)
 tls_t *tls_new(xmpp_conn_t *conn)
 {
+    tls_t *tls;
+    int mode;
     _xmppctx = conn->ctx;
     _certfail_handler = conn->certfail_handler;
     _cert_handled = 0;
     _last_cb_res = 0;
-    tls_t *tls = xmpp_alloc(conn->ctx, sizeof(*tls));
-    int mode;
+    tls = xmpp_alloc(conn->ctx, sizeof(*tls));
 
     xmpp_debug(conn->ctx, "TLS", "OpenSSL version: %s", SSLeay_version(SSLEAY_VERSION));
 
     if (tls) {
         int ret;
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L
+        /* Hostname verification is supported in OpenSSL 1.0.2 and newer. */
+        X509_VERIFY_PARAM *param;
+#endif
         memset(tls, 0, sizeof(*tls));
 
         tls->ctx = conn->ctx;
@@ -334,7 +362,7 @@ tls_t *tls_new(xmpp_conn_t *conn)
         SSL_set_verify(tls->ssl, mode, 0);
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L
         /* Hostname verification is supported in OpenSSL 1.0.2 and newer. */
-        X509_VERIFY_PARAM *param = SSL_get0_param(tls->ssl);
+        param = SSL_get0_param(tls->ssl);
 
         /*
          * Allow only complete wildcards.  RFC 6125 discourages wildcard usage
