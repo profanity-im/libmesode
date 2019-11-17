@@ -18,6 +18,12 @@ AS_CASE([$host_os],
     [*haiku*],     [PLATFORM="haiku"],
                    [PLATFORM="nix"])
 
+WARNING_FLAGS="-Wall"
+
+AS_CASE([$PLATFORM],
+    [haiku],   [],
+               [WARNING_FLAGS="$WARNING_FLAGS -Wextra -Wno-unused-parameter"])
+
 PKG_CHECK_MODULES([expat], [expat >= 2.0.0],
                   [PC_REQUIRES="expat ${PC_REQUIRES}"],
                   [AC_CHECK_HEADER([expat.h],
@@ -93,5 +99,6 @@ AC_SUBST([PC_LIBS], [${PC_LIBS}])
 AC_SUBST(PARSER_CFLAGS)
 AC_SUBST(PARSER_LIBS)
 AC_SUBST(RESOLV_LIBS)
+AC_SUBST(WARNING_FLAGS)
 AC_CONFIG_FILES([Makefile libmesode.pc])
 AC_OUTPUT
