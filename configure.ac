@@ -15,6 +15,7 @@ AS_CASE([$host_os],
     [*nto*|*qnx*], [PLATFORM="qnx"],
     [*solaris*],   [PLATFORM="solaris"],
     [*android*],   [PLATFORM="android"],
+    [*haiku*],     [PLATFORM="haiku"],
                    [PLATFORM="nix"])
 
 PKG_CHECK_MODULES([expat], [expat >= 2.0.0],
@@ -47,13 +48,14 @@ if test "x$enable_tls" != xno; then
         )])
 fi
 
-AC_SEARCH_LIBS([socket], [socket])
+AC_SEARCH_LIBS([socket], [network socket])
 
 AS_CASE([$PLATFORM],
     [bsd],     [RESOLV_LIBS=""],
     [qnx],     [RESOLV_LIBS="-lsocket"],
     [solaris], [RESOLV_LIBS="-lresolv -lsocket -lnsl"],
     [android], [RESOLV_LIBS=""],
+    [haiku],   [RESOLV_LIBS="-lnetwork"],
                [RESOLV_LIBS="-lresolv"])
 
 LIBS_TMP="${LIBS}"
