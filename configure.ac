@@ -41,6 +41,12 @@ PARSER_LIBS=$expat_LIBS
 
 AC_ARG_ENABLE([tls],
     [AS_HELP_STRING([--disable-tls], [disable TLS support])])
+AC_ARG_ENABLE([cares],
+    [AS_HELP_STRING([--enable-cares], [use c-ares for DNS resolution])])
+
+AC_SEARCH_LIBS([socket], [network socket])
+AC_CHECK_FUNCS([snprintf vsnprintf])
+AC_CHECK_DECLS([va_copy], [], [], [#include <stdarg.h>])
 
 if test "x$enable_tls" != xno; then
     PKG_CHECK_MODULES([openssl], [openssl],
