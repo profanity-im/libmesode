@@ -1,3 +1,11 @@
+0.10.0
+	- New API:
+		- xmpp_stanza_get_child_by_name_and_ns()
+		- xmpp_stanza_new_from_string()
+	- Fixed issue with IPv6 on Windows (https://github.com/strophe/libstrophe/issues/153)
+	- LibreSSL support
+	- Improved portability across systems such as Haiku, Windows
+
 0.9.3
 	- PLAIN mechanism is used only when no other mechanisms are supported
 	- Legacy authentication is disabled by default, can be enabled with
