@@ -1,4 +1,4 @@
-AC_INIT([libmesode], [0.9.3], [boothj5web@gmail.com])
+AC_INIT([libmesode], [0.10.1], [boothj5web@gmail.com])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign])
 LT_INIT([dlopen])

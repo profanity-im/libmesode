@@ -1,3 +1,6 @@
+0.10.1
+	- Use correct version in configure.ac
+
 0.10.0
 	- New API:
 		- xmpp_stanza_get_child_by_name_and_ns()
