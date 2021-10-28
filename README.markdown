@@ -1,3 +1,10 @@
+## Important notice
+libmesode is deprecated. Please use [libstrophe](https://github.com/strophe/libstrophe) (>= 0.11.0).
+The major functionality that distinguished it from libstrophe was the manual verification of a certificate.
+This has now been [implemented](https://github.com/strophe/libstrophe/pull/186) in libstrophe [0.11.0](https://github.com/strophe/libstrophe/releases/tag/0.11.0).
+
+The other reasons for the fork are listed below. And none is worth keeping this fork around.
+
 # libmesode
 
 libmesode is a fork of libstrophe (http://strophe.im/libstrophe/) for use in Profanity (http://www.profanity.im/).
